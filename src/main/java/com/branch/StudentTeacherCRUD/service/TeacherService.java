@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface TeacherService {
 
-    TeacherResponseDto createTeacher(TeacherRequestDto teacherRequestDto);
+    TeacherResponseDto createTeacher(TeacherRequestDto teacherRequestDto, List<Long> ids);
 
     LinkedList<TeacherResponseDto> readTeachers();
 

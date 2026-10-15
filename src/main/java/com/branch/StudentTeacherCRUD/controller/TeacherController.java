@@ -16,9 +16,9 @@ public class TeacherController {
 
     private final TeacherService teacherService;
 
-    @PostMapping("/createTeacher")
-    public TeacherResponseDto createTeacher(@RequestBody TeacherRequestDto teacher) {
-        return teacherService.createTeacher(teacher);
+    @PostMapping("/createTeacher/{ids}")
+    public TeacherResponseDto createTeacher(@RequestBody TeacherRequestDto teacher, @PathVariable List<Long> ids) {
+        return teacherService.createTeacher(teacher,ids);
     }
 
     @GetMapping("/readTeacher")

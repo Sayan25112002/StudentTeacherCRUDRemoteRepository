@@ -1,11 +1,12 @@
 package com.branch.StudentTeacherCRUD.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -27,5 +28,8 @@ public class Teacher {
     private String address;
 
     private String designation;
+
+    @ManyToMany(mappedBy = "teachers")
+    private List<Student> students = new ArrayList<>();
 
 }

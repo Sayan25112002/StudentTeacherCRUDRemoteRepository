@@ -1,11 +1,10 @@
 package com.branch.StudentTeacherCRUD.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.*;
 
 @Entity
 @Getter
@@ -27,5 +26,13 @@ public class Student {
     private String password;
 
     private String address;
+
+    @ManyToMany
+    @JoinTable(
+            name = "studentTeacherTable",
+            joinColumns = @JoinColumn(name="student_id"),
+            inverseJoinColumns = @JoinColumn(name="teacher_id")
+    )
+    private List<Teacher> teachers = new ArrayList<>();
 
 }
