@@ -21,6 +21,6 @@ public class TeacherRequestDto {
 
     private String address;
 
-    private String department;
+    private String designation;
 
 }

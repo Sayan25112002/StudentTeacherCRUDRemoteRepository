@@ -26,6 +26,6 @@ public class Teacher {
 
     private String address;
 
-    private String department;
+    private String designation;
 
 }

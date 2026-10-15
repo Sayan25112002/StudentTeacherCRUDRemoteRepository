@@ -21,6 +21,6 @@ public class TeacherResponseDto {
 
     private String address;
 
-    private String department;
+    private String designation;
 
 }

@@ -41,7 +41,7 @@ public class TeacherServiceImpl implements TeacherService {
         teacher.setEmail(teacherRequestDto.getEmail());
         teacher.setContactNo(teacherRequestDto.getContactNo());
         teacher.setAddress(teacherRequestDto.getAddress());
-        teacher.setDepartment(teacherRequestDto.getDepartment());
+        teacher.setDesignation(teacherRequestDto.getDesignation());
         Teacher savedTeacher = teacherRepository.save(teacher);
         return teacherMapper.toTeacherResponseDto(savedTeacher);
     }
