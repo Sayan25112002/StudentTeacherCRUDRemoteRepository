@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,9 +7,7 @@
     <title>Teacher Management</title>
 
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -18,15 +17,9 @@
             color: #243047;
         }
 
-        .container {
-            max-width: 1100px;
-            margin: auto;
-        }
+        .container { max-width: 1100px; margin: auto; }
 
-        h1 {
-            text-align: center;
-            color: #263b80;
-        }
+        h1 { text-align: center; color: #263b80; }
 
         .card {
             background: white;
@@ -48,7 +41,7 @@
             font-weight: bold;
         }
 
-        input, textarea {
+        input, textarea, select {
             width: 100%;
             padding: 11px;
             border: 1px solid #ccd2df;
@@ -57,9 +50,11 @@
             font-family: inherit;
         }
 
-        textarea {
-            resize: vertical;
+        select[multiple] {
+            min-height: 140px;
         }
+
+        textarea { resize: vertical; }
 
         button {
             padding: 10px 15px;
@@ -70,29 +65,13 @@
             margin: 4px;
         }
 
-        .primary {
-            background: #3156c9;
-        }
+        .primary { background: #3156c9; }
+        .secondary { background: #667085; }
+        .edit { background: #d99016; }
+        .delete { background: #d63838; }
 
-        .secondary {
-            background: #667085;
-        }
-
-        .edit {
-            background: #d99016;
-        }
-
-        .delete {
-            background: #d63838;
-        }
-
-        .actions {
-            margin-top: 18px;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-        }
+        .actions { margin-top: 18px; }
+        .table-wrapper { overflow-x: auto; }
 
         table {
             width: 100%;
@@ -107,10 +86,7 @@
             text-align: left;
         }
 
-        th {
-            background: #263b80;
-            color: white;
-        }
+        th { background: #263b80; color: white; }
 
         #message {
             margin-top: 15px;
@@ -118,14 +94,15 @@
             overflow-wrap: anywhere;
         }
 
-        @media (max-width: 600px) {
-            body {
-                padding: 12px;
-            }
+        .hint {
+            font-size: 13px;
+            color: #667085;
+            margin-top: 6px;
+        }
 
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            .form-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -147,7 +124,7 @@
 
                 <div>
                     <label for="email">Email</label>
-                    <input type="text" id="email" required>
+                    <input type="email" id="email" required>
                 </div>
 
                 <div>
@@ -167,7 +144,15 @@
 
                 <div>
                     <label for="designation">Designation</label>
-                    <input type="text" id="designation" required/>
+                    <input type="text" id="designation" required>
+                </div>
+
+                <div>
+                    <label for="studentIds">Assign Students</label>
+                    <select id="studentIds" multiple></select>
+                    <p class="hint">
+                        Hold Ctrl (Windows) to select multiple students.
+                    </p>
                 </div>
             </div>
 
@@ -203,6 +188,7 @@
                     <th>Contact Number</th>
                     <th>Address</th>
                     <th>Designation</th>
+                    <th>Students</th>
                     <th>Actions</th>
                 </tr>
                 </thead>
@@ -218,6 +204,7 @@
     const API = {
         create: "http://localhost:8080/createTeacher",
         read: "http://localhost:8080/readTeacher",
+        readStudents: "http://localhost:8080/readStudent",
         update: id => `http://localhost:8080/updateTeacher/${id}`,
         delete: id => `http://localhost:8080/deleteTeacher/${id}`
     };
@@ -225,9 +212,11 @@
     const form = document.getElementById("teacherForm");
     const table = document.getElementById("teacherTable");
     const message = document.getElementById("message");
+    const studentSelect = document.getElementById("studentIds");
 
     let editingId = null;
     let teachers = [];
+    let students = [];
 
     async function request(url, options = {}) {
         const response = await fetch(url, options);
@@ -237,9 +226,7 @@
             throw new Error(details || `Request failed: ${response.status}`);
         }
 
-        if (response.status === 204) {
-            return null;
-        }
+        if (response.status === 204) return null;
 
         const contentType = response.headers.get("content-type") || "";
 
@@ -259,8 +246,30 @@
             contactNo: document.getElementById("contactNo").value.trim(),
             password: document.getElementById("password").value,
             address: document.getElementById("address").value.trim(),
-            designation: document.getElementById("designation").value.trim(),
+            designation: document.getElementById("designation").value.trim()
         };
+    }
+
+    function getSelectedStudentIds() {
+        return Array.from(studentSelect.selectedOptions)
+            .map(option => option.value);
+    }
+
+    async function loadStudents() {
+        students = await request(API.readStudents);
+
+        if (!Array.isArray(students)) {
+            throw new Error("Expected a list of students from the API.");
+        }
+
+        studentSelect.replaceChildren();
+
+        students.forEach(student => {
+            const option = document.createElement("option");
+            option.value = student.id;
+            option.textContent = `${student.name} (ID: ${student.id})`;
+            studentSelect.appendChild(option);
+        });
     }
 
     async function loadTeachers() {
@@ -285,7 +294,7 @@
             const row = document.createElement("tr");
             const cell = document.createElement("td");
 
-            cell.colSpan = 7;
+            cell.colSpan = 8;
             cell.textContent = "No teacher records found.";
             row.appendChild(cell);
             table.appendChild(row);
@@ -301,7 +310,8 @@
                 teacher.email,
                 teacher.contactNo,
                 teacher.address,
-                teacher.designation
+                teacher.designation,
+                getStudentNames(teacher)
             ].forEach(value => {
                 const cell = document.createElement("td");
                 cell.textContent = value ?? "";
@@ -313,12 +323,16 @@
             const editButton = document.createElement("button");
             editButton.textContent = "Edit";
             editButton.className = "edit";
-            editButton.addEventListener("click", () => editTeacher(teacher.id));
+            editButton.addEventListener("click", () =>
+                editTeacher(teacher.id)
+            );
 
             const deleteButton = document.createElement("button");
             deleteButton.textContent = "Delete";
             deleteButton.className = "delete";
-            deleteButton.addEventListener("click", () => deleteTeacher(teacher.id));
+            deleteButton.addEventListener("click", () =>
+                deleteTeacher(teacher.id)
+            );
 
             actions.append(editButton, deleteButton);
             row.appendChild(actions);
@@ -326,28 +340,71 @@
         });
     }
 
+    function getStudentNames(teacher) {
+        if (Array.isArray(teacher.students)) {
+            return teacher.students
+                .map(student => student.name ?? `ID ${student.id}`)
+                .join(", ");
+        }
+
+        if (Array.isArray(teacher.studentIds)) {
+            return teacher.studentIds
+                .map(id => {
+                    const student = students.find(
+                        item => String(item.id) === String(id)
+                    );
+                    return student ? student.name : `ID ${id}`;
+                })
+                .join(", ");
+        }
+
+        return "";
+    }
+
+    function selectTeacherStudents(teacher) {
+        const ids = Array.isArray(teacher.students)
+            ? teacher.students.map(student => student.id)
+            : (teacher.studentIds ?? []);
+
+        Array.from(studentSelect.options).forEach(option => {
+            option.selected = ids.some(
+                id => String(id) === option.value
+            );
+        });
+    }
+
+    function addStudentIdsToUrl(url, ids) {
+        const result = new URL(url);
+
+        ids.forEach(id => result.searchParams.append("ids", id));
+
+        return result.toString();
+    }
+
     form.addEventListener("submit", async event => {
         event.preventDefault();
 
         const teacher = getFormData();
+        const selectedIds = getSelectedStudentIds();
         const isEditing = editingId !== null;
 
-        // Do not send a blank password when updating.
         if (isEditing && !teacher.password) {
             delete teacher.password;
         }
 
+        const url = addStudentIdsToUrl(
+            isEditing ? API.update(editingId) : API.create,
+            selectedIds
+        );
+
         try {
-            await request(
-                isEditing ? API.update(editingId) : API.create,
-                {
-                    method: isEditing ? "PUT" : "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(teacher)
-                }
-            );
+            await request(url, {
+                method: isEditing ? "PUT" : "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(teacher)
+            });
 
             resetForm();
             await loadTeachers();
@@ -375,12 +432,15 @@
         document.getElementById("contactNo").value = teacher.contactNo ?? "";
         document.getElementById("password").value = "";
         document.getElementById("address").value = teacher.address ?? "";
-        document.getElementById("designation").value = teacher.designation ?? "";
+        document.getElementById("designation").value =
+            teacher.designation ?? "";
 
         document.getElementById("password").required = false;
         document.getElementById("formTitle").textContent = "Update Teacher";
         document.getElementById("saveButton").textContent = "Update Teacher";
         document.getElementById("cancelButton").hidden = false;
+
+        selectTeacherStudents(teacher);
 
         window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -412,15 +472,36 @@
         document.getElementById("formTitle").textContent = "Add Teacher";
         document.getElementById("saveButton").textContent = "Create Teacher";
         document.getElementById("cancelButton").hidden = true;
+
+        Array.from(studentSelect.options).forEach(option => {
+            option.selected = false;
+        });
     }
 
     document.getElementById("cancelButton")
         .addEventListener("click", resetForm);
 
     document.getElementById("refreshButton")
-        .addEventListener("click", loadTeachers);
+        .addEventListener("click", async () => {
+            try {
+                await loadStudents();
+                await loadTeachers();
+                showMessage("Records refreshed.");
+            } catch (error) {
+                showMessage("Could not refresh records: " + error.message);
+            }
+        });
 
-    loadTeachers();
+    async function initialize() {
+        try {
+            await loadStudents();
+            await loadTeachers();
+        } catch (error) {
+            showMessage("Could not initialize page: " + error.message);
+        }
+    }
+
+    initialize();
 </script>
 </body>
 </html>
