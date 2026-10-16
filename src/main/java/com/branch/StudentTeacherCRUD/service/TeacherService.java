@@ -12,8 +12,9 @@ public interface TeacherService {
 
     LinkedList<TeacherResponseDto> readTeachers();
 
-    TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id);
+    TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id, List<Long> ids);
 
     void deleteTeacher(Long id);
 
 }
+

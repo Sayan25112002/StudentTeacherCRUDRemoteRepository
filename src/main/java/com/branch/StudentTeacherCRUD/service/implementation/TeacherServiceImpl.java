@@ -12,6 +12,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,6 +29,9 @@ public class TeacherServiceImpl implements TeacherService {
         Teacher teacher = teacherMapper.toTeacher(teacherRequestDto);
         List<Student> students = studentRepository.findAllById(ids);
         teacher.setStudents(students);
+        for(Student student : students){
+            student.getTeachers().add(teacher);
+        }
         Teacher savedTeacher = teacherRepository.save(teacher);
         return teacherMapper.toTeacherResponseDto(savedTeacher);
     }
@@ -40,13 +44,24 @@ public class TeacherServiceImpl implements TeacherService {
     }
 
     @Override
-    public TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id) {
+    public TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id, List<Long> ids) {
         Teacher teacher = teacherRepository.findById(id).orElseThrow(()->new EntityNotFoundException("Teacher not found"));
         teacher.setName(teacherRequestDto.getName());
         teacher.setEmail(teacherRequestDto.getEmail());
         teacher.setContactNo(teacherRequestDto.getContactNo());
         teacher.setAddress(teacherRequestDto.getAddress());
         teacher.setDesignation(teacherRequestDto.getDesignation());
+        List<Student> oldStudents = new ArrayList<>(teacher.getStudents());
+        for(Student student : oldStudents){
+            student.getTeachers().remove(teacher);
+        }
+        List<Student> newStudents = studentRepository.findAllById(ids);
+        teacher.setStudents(newStudents);
+        for(Student student : newStudents){
+            if(!student.getTeachers().contains(teacher)){
+                student.getTeachers().add(teacher);
+            }
+        }
         Teacher savedTeacher = teacherRepository.save(teacher);
         return teacherMapper.toTeacherResponseDto(savedTeacher);
     }
@@ -54,6 +69,10 @@ public class TeacherServiceImpl implements TeacherService {
     @Override
     public void deleteTeacher(Long id) {
         Teacher teacher = teacherRepository.findById(id).orElseThrow(()->new EntityNotFoundException("Teacher not found"));
+        List<Student> students = new ArrayList<>(teacher.getStudents());
+        for(Student student : students){
+            student.getTeachers().remove(teacher);
+        }
         teacherRepository.delete(teacher);
     }
 }

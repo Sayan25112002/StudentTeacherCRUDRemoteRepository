@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -205,8 +204,8 @@
         create: "http://localhost:8080/createTeacher",
         read: "http://localhost:8080/readTeacher",
         readStudents: "http://localhost:8080/readStudent",
-        update: id => `http://localhost:8080/updateTeacher/${id}`,
-        delete: id => `http://localhost:8080/deleteTeacher/${id}`
+        update: `http://localhost:8080/updateTeacher`,
+        delete: `http://localhost:8080/deleteTeacher`
     };
 
     const form = document.getElementById("teacherForm");
@@ -267,7 +266,7 @@
         students.forEach(student => {
             const option = document.createElement("option");
             option.value = student.id;
-            option.textContent = `${student.name} (ID: ${student.id})`;
+            option.textContent = `${student.firstName} ${student.lastName} (ID: ${student.id})`;
             studentSelect.appendChild(option);
         });
     }
@@ -343,7 +342,10 @@
     function getStudentNames(teacher) {
         if (Array.isArray(teacher.students)) {
             return teacher.students
-                .map(student => student.name ?? `ID ${student.id}`)
+                .map(student =>
+                    `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim()
+                    || `ID ${student.id}`
+                )
                 .join(", ");
         }
 
@@ -353,7 +355,10 @@
                     const student = students.find(
                         item => String(item.id) === String(id)
                     );
-                    return student ? student.name : `ID ${id}`;
+
+                    return student
+                        ? `${student.firstName} ${student.lastName}`.trim()
+                        : `ID ${id}`;
                 })
                 .join(", ");
         }
@@ -392,10 +397,18 @@
             delete teacher.password;
         }
 
-        const url = addStudentIdsToUrl(
-            isEditing ? API.update(editingId) : API.create,
-            selectedIds
-        );
+
+        let url;
+        if (isEditing) {
+            url = new URL(API.update);
+            url.searchParams.append("id", editingId);
+            selectedIds.forEach(id => {
+                url.searchParams.append("ids", id);
+            });
+            url = url.toString();
+        } else {
+            url = addStudentIdsToUrl(API.create, selectedIds);
+        }
 
         try {
             await request(url, {
@@ -451,7 +464,9 @@
         }
 
         try {
-            await request(API.delete(id), { method: "DELETE" });
+            await request(`${API.delete}?id=${id}`, {
+                method: "DELETE"
+            });
 
             if (editingId === id) {
                 resetForm();

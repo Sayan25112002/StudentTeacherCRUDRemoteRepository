@@ -29,7 +29,7 @@ public class Teacher {
 
     private String designation;
 
-    @ManyToMany(mappedBy = "teachers")
+    @ManyToMany(mappedBy = "teachers", fetch = FetchType.EAGER)
     private List<Student> students = new ArrayList<>();
 
 }

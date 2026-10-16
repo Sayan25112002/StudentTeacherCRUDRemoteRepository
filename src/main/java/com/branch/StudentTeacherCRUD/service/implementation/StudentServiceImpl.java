@@ -3,6 +3,7 @@ package com.branch.StudentTeacherCRUD.service.implementation;
 import com.branch.StudentTeacherCRUD.dto.requestDto.StudentRequestDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.StudentResponseDto;
 import com.branch.StudentTeacherCRUD.entity.Student;
+import com.branch.StudentTeacherCRUD.entity.Teacher;
 import com.branch.StudentTeacherCRUD.mapper.StudentMapper;
 import com.branch.StudentTeacherCRUD.repository.StudentRepository;
 import com.branch.StudentTeacherCRUD.service.StudentService;
@@ -46,6 +47,10 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public void deleteStudent(Long id) {
         Student student = studentRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Student not found"));
+        List<Teacher> teachers = student.getTeachers();
+        for (Teacher teacher : teachers) {
+            teacher.getStudents().remove(student);
+        }
         studentRepository.delete(student);
     }
 }

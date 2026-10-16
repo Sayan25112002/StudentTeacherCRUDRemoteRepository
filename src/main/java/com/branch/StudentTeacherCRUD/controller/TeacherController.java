@@ -16,8 +16,8 @@ public class TeacherController {
 
     private final TeacherService teacherService;
 
-    @PostMapping("/createTeacher/{ids}")
-    public TeacherResponseDto createTeacher(@RequestBody TeacherRequestDto teacher, @PathVariable List<Long> ids) {
+    @PostMapping("/createTeacher")
+    public TeacherResponseDto createTeacher(@RequestBody TeacherRequestDto teacher, @RequestParam List<Long> ids) {
         return teacherService.createTeacher(teacher,ids);
     }
 
@@ -26,13 +26,13 @@ public class TeacherController {
         return teacherService.readTeachers();
     }
 
-    @PutMapping("/updateTeacher/{id}")
-    public TeacherResponseDto updateTeacher(@RequestBody TeacherRequestDto teacher, @PathVariable Long id) {
-        return teacherService.updateTeacher(teacher, id);
+    @PutMapping("/updateTeacher")
+    public TeacherResponseDto updateTeacher(@RequestBody TeacherRequestDto teacher, @RequestParam Long id, @RequestParam List<Long> ids) {
+        return teacherService.updateTeacher(teacher, id,ids);
     }
 
-    @DeleteMapping("/deleteTeacher/{id}")
-    public void deleteTeacher(@PathVariable Long id) {
+    @DeleteMapping("/deleteTeacher")
+    public void deleteTeacher(@RequestParam Long id) {
         teacherService.deleteTeacher(id);
     }
 }
