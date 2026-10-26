@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Set;
 
 @Data
 @AllArgsConstructor
@@ -25,6 +26,6 @@ public class TeacherResponseDto {
 
     private String designation;
 
-    private List<StudentResponseDto> students;
+    private Set<StudentResponseDto> students;
 
 }
