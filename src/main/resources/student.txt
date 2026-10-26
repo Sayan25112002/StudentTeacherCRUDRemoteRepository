@@ -1,0 +1,1 @@
+The project contains list of students and CRUD operation on students.
