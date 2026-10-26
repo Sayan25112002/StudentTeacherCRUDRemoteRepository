@@ -2,7 +2,6 @@ package com.branch.StudentTeacherCRUD.controller;
 
 import com.branch.StudentTeacherCRUD.dto.requestDto.TeacherRequestDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.TeacherResponseDto;
-import com.branch.StudentTeacherCRUD.entity.Teacher;
 import com.branch.StudentTeacherCRUD.service.TeacherService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
