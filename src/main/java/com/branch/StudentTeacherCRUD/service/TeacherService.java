@@ -8,13 +8,15 @@ import java.util.List;
 
 public interface TeacherService {
 
-    TeacherResponseDto createTeacher(TeacherRequestDto teacherRequestDto, List<Long> ids);
+    TeacherResponseDto createTeacher(TeacherRequestDto teacherRequestDto);
 
     LinkedList<TeacherResponseDto> readTeachers();
 
-    TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id, List<Long> ids);
+    TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id);
 
     void deleteTeacher(Long id);
+
+    TeacherResponseDto assignTeacherToStudents(Long id, List<Long> ids);
 
 }
 

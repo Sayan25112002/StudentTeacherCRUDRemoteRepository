@@ -24,13 +24,13 @@ public class StudentController {
         return studentService.readStudents();
     }
 
-    @PutMapping("/updateStudent/{id}")
-    public StudentResponseDto updateStudent(@PathVariable Long id, @RequestBody StudentRequestDto student){
+    @PutMapping("/updateStudent")
+    public StudentResponseDto updateStudent(@RequestParam Long id, @RequestBody StudentRequestDto student){
         return studentService.updateStudent(student,id);
     }
 
-    @DeleteMapping("/deleteStudent/{id}")
-    public void deleteStudent(@PathVariable Long id){
+    @DeleteMapping("/deleteStudent")
+    public void deleteStudent(@RequestParam Long id){
         studentService.deleteStudent(id);
     }
 }

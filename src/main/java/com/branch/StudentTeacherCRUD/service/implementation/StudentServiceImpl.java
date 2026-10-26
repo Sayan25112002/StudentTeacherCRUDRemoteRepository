@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -36,18 +37,28 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public StudentResponseDto updateStudent(StudentRequestDto studentRequestDto, Long id) {
         Student student = studentRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Student not found"));
-        student.setFirstName(studentRequestDto.getFirstName());
-        student.setLastName(studentRequestDto.getLastName());
-        student.setEmail(studentRequestDto.getEmail());
-        student.setContactNo(studentRequestDto.getContactNo());
-        student.setAddress(studentRequestDto.getAddress());
+        if(studentRequestDto.getFirstName() != null) {
+            student.setFirstName(studentRequestDto.getFirstName());
+        }
+        if(studentRequestDto.getLastName() != null) {
+            student.setLastName(studentRequestDto.getLastName());
+        }
+        if(studentRequestDto.getEmail() != null) {
+            student.setEmail(studentRequestDto.getEmail());
+        }
+        if(studentRequestDto.getContactNo() != null) {
+            student.setContactNo(studentRequestDto.getContactNo());
+        }
+        if(studentRequestDto.getAddress() != null) {
+            student.setAddress(studentRequestDto.getAddress());
+        }
         return studentMapper.toStudentResponseDto(studentRepository.save(student));
     }
 
     @Override
     public void deleteStudent(Long id) {
         Student student = studentRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Student not found"));
-        List<Teacher> teachers = student.getTeachers();
+        Set<Teacher> teachers = student.getTeachers();
         for (Teacher teacher : teachers) {
             teacher.getStudents().remove(student);
         }

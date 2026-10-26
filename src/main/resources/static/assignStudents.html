@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assign Students to Teacher</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 30px;
+            font-family: Arial, sans-serif;
+            background: #f3f5f9;
+            color: #243047;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        h1, h2 {
+            color: #263b80;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            margin: 24px 0;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px #00000010;
+        }
+
+        .teacher-name {
+            padding: 16px;
+            margin-bottom: 20px;
+            background: #edf2ff;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccd2df;
+            border-radius: 6px;
+            font-size: 15px;
+            font-family: inherit;
+            background: white;
+        }
+
+        select[multiple] {
+            min-height: 180px;
+        }
+
+        .hint {
+            color: #667085;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 11px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+            margin: 8px 4px 0 0;
+        }
+
+        .primary {
+            background: #3156c9;
+        }
+
+        .secondary {
+            background: #667085;
+        }
+
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+
+        .student-list {
+            margin-top: 18px;
+            padding: 16px;
+            background: #f8faff;
+            border: 1px solid #dbe5ff;
+            border-radius: 8px;
+        }
+
+        .student-list p {
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Student Teacher Management System</h1>
+
+    <section class="card">
+        <h2>Assign Students to Teacher</h2>
+
+        <div class="teacher-name" id="teacherName">
+            Loading teacher...
+        </div>
+
+        <form id="assignForm">
+            <label for="students">Select Students</label>
+
+            <select id="students" multiple required>
+                <option disabled>Loading students...</option>
+            </select>
+
+            <p class="hint">
+                Hold Ctrl on Windows while clicking to select multiple students.
+            </p>
+
+            <button type="submit" class="primary">
+                Assign Students
+            </button>
+
+            <button type="button" class="secondary" id="backButton">
+                Back to Teachers
+            </button>
+        </form>
+
+        <p id="message" role="status" aria-live="polite"></p>
+
+        <div class="student-list">
+            <strong>Currently Assigned Students</strong>
+            <p id="currentAssignments">Loading assignments...</p>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    const API = {
+        teachers: "http://localhost:8080/readTeacher",
+        students: "http://localhost:8080/readStudent",
+        assign: "http://localhost:8080/mapStudentsToTeacher"
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const teacherId = params.get("teacherId");
+
+    const teacherName = document.getElementById("teacherName");
+    const studentsSelect = document.getElementById("students");
+    const message = document.getElementById("message");
+    const currentAssignments =
+        document.getElementById("currentAssignments");
+
+    let selectedTeacher = null;
+
+    async function request(url, options = {}) {
+        const response = await fetch(url, options);
+
+        if (!response.ok) {
+            const details = await response.text();
+            throw new Error(
+                details || `Request failed: ${response.status}`
+            );
+        }
+
+        if (response.status === 204) {
+            return null;
+        }
+
+        const contentType =
+            response.headers.get("content-type") || "";
+
+        return contentType.includes("application/json")
+            ? response.json()
+            : null;
+    }
+
+    function showMessage(text) {
+        message.textContent = text;
+    }
+
+    function getStudentName(student) {
+        return `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim()
+            || `Student ${student.id}`;
+    }
+
+    async function loadPage() {
+        if (!teacherId || !/^[1-9]\d*$/.test(teacherId)) {
+            teacherName.textContent = "Invalid teacher";
+            showMessage("A valid teacher ID was not provided.");
+            studentsSelect.disabled = true;
+            return;
+        }
+
+        try {
+            const [teachers, students] = await Promise.all([
+                request(API.teachers),
+                request(API.students)
+            ]);
+
+            if (!Array.isArray(teachers) || !Array.isArray(students)) {
+                throw new Error("Invalid response received from the server.");
+            }
+
+            selectedTeacher = teachers.find(
+                teacher => String(teacher.id) === teacherId
+            );
+
+            if (!selectedTeacher) {
+                throw new Error("Teacher record not found.");
+            }
+
+            teacherName.textContent =
+                `Teacher: ${selectedTeacher.name}`;
+
+            studentsSelect.replaceChildren();
+
+            if (students.length === 0) {
+                studentsSelect.add(
+                    new Option("No students available", "")
+                );
+                studentsSelect.disabled = true;
+            } else {
+                students.forEach(student => {
+                    const option = new Option(
+                        getStudentName(student),
+                        student.id
+                    );
+
+                    studentsSelect.add(option);
+                });
+
+                // Preselect students already assigned to this teacher.
+                const assignedIds = new Set(
+                    Array.isArray(selectedTeacher.students)
+                        ? selectedTeacher.students.map(
+                            student => String(student.id)
+                        )
+                        : []
+                );
+
+                Array.from(studentsSelect.options).forEach(option => {
+                    option.selected = assignedIds.has(option.value);
+                });
+            }
+
+            renderCurrentAssignments();
+        } catch (error) {
+            teacherName.textContent = "Unable to load teacher";
+            showMessage("Could not load data: " + error.message);
+        }
+    }
+
+    function renderCurrentAssignments() {
+        const assignedStudents = Array.isArray(selectedTeacher?.students)
+            ? selectedTeacher.students
+            : [];
+
+        if (assignedStudents.length === 0) {
+            currentAssignments.textContent =
+                "No assigned students returned by the server.";
+            return;
+        }
+
+        currentAssignments.textContent = assignedStudents
+            .map(getStudentName)
+            .join(", ");
+    }
+
+    document.getElementById("assignForm")
+        .addEventListener("submit", async event => {
+            event.preventDefault();
+
+            if (!selectedTeacher) {
+                showMessage("Teacher information is not available.");
+                return;
+            }
+
+            const ids = Array.from(studentsSelect.selectedOptions)
+                .map(option => option.value);
+
+            if (ids.length === 0) {
+                showMessage("Please select at least one student.");
+                return;
+            }
+
+            const url = new URL(API.assign);
+            url.searchParams.set("id", teacherId);
+
+            ids.forEach(id => {
+                url.searchParams.append("ids", id);
+            });
+
+            try {
+                await request(url.toString(), {
+                    method: "POST"
+                });
+
+                showMessage("Students assigned successfully.");
+
+                // Refresh teacher data to display the latest assignments.
+                await loadPage();
+            } catch (error) {
+                showMessage(
+                    "Student assignment failed: " + error.message
+                );
+            }
+        });
+
+    document.getElementById("backButton")
+        .addEventListener("click", () => {
+            window.location.href = "teacher.html";
+        });
+
+    loadPage();
+</script>
+</body>
+</html>

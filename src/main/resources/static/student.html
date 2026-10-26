@@ -218,8 +218,8 @@
     const API = {
         create: "http://localhost:8080/createStudent",
         read: "http://localhost:8080/readStudent",
-        update: id => `http://localhost:8080/updateStudent/${id}`,
-        delete: id => `http://localhost:8080/deleteStudent/${id}`
+        update: id => `http://localhost:8080/updateStudent?id=${id}`,
+        delete: id => `http://localhost:8080/deleteStudent?id=${id}`
     };
 
     const form = document.getElementById("studentForm");

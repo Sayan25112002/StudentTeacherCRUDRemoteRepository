@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -30,6 +31,6 @@ public class Teacher {
     private String designation;
 
     @ManyToMany(mappedBy = "teachers", fetch = FetchType.EAGER)
-    private List<Student> students = new ArrayList<>();
+    private Set<Student> students = new HashSet<>();
 
 }
