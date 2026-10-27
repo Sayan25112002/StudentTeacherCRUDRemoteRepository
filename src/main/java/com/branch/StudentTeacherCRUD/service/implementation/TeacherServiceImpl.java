@@ -71,6 +71,9 @@ public class TeacherServiceImpl implements TeacherService {
         Teacher teacher = teacherRepository.findById(id).orElseThrow(()->new EntityNotFoundException("Teacher not found"));
         List<Student> studentsList = studentRepository.findAllById(ids);
         Set<Student> students = new HashSet<>(studentsList);
+        for(Student student : teacher.getStudents()){
+            student.getTeachers().remove(teacher);
+        }
         teacher.setStudents(students);
         for(Student student : students){
             student.getTeachers().add(teacher);
