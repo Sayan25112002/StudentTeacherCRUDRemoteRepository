@@ -143,7 +143,13 @@
 
                 <div>
                     <label for="photo">Student Photo</label>
-                    <input type="file" id="photo" accept="image/*">
+                    <input type="file" id="photo" accept="image/*" required>
+
+                    <img id="photoPreview"
+                         alt="Current Student Photo"
+                         width="100"
+                         height="100"
+                         style="display: none; object-fit: cover; margin-top: 10px;">
                 </div>
 
                 <div>
@@ -270,6 +276,20 @@
         };
     }
 
+    // Show a preview as soon as the user selects a photo.
+    document.getElementById("photo").addEventListener("change", function () {
+        const photoPreview = document.getElementById("photoPreview");
+        const photo = this.files[0];
+
+        if (photo) {
+            photoPreview.src = URL.createObjectURL(photo);
+            photoPreview.style.display = "block";
+        } else {
+            photoPreview.removeAttribute("src");
+            photoPreview.style.display = "none";
+        }
+    });
+
     async function loadStudents() {
         try {
             const data = await request(API.read);
@@ -292,7 +312,7 @@
             const row = document.createElement("tr");
             const cell = document.createElement("td");
 
-            cell.colSpan = 7;
+            cell.colSpan = 8;
             cell.textContent = "No student records found.";
             row.appendChild(cell);
             table.appendChild(row);
@@ -366,7 +386,8 @@
         const formData = new FormData();
 
         Object.entries(student).forEach(([key, value]) => {
-            if (key === "password" && isEditing && !value) {
+            // Password is sent only when creating a student.
+            if (key === "password" && isEditing) {
                 return;
             }
             formData.append(key, value);
@@ -406,6 +427,21 @@
 
         editingId = id;
 
+        document.getElementById("photo").value = "";
+
+        const photoPreview = document.getElementById("photoPreview");
+
+        if (student.photoPath) {
+            const fileName = student.photoPath.split(/[\\/]/).pop();
+
+            photoPreview.src =
+                `http://localhost:8080/images/${encodeURIComponent(fileName)}`;
+
+            photoPreview.style.display = "block";
+        } else {
+            photoPreview.removeAttribute("src");
+            photoPreview.style.display = "none";
+        }
         document.getElementById("firstName").value = student.firstName ?? "";
         document.getElementById("lastName").value = student.lastName ?? "";
         document.getElementById("email").value = student.email ?? "";
@@ -413,7 +449,12 @@
         document.getElementById("password").value = "";
         document.getElementById("address").value = student.address ?? "";
 
+        // Password is not shown or submitted while editing.
         document.getElementById("password").required = false;
+        document.getElementById("password").parentElement.style.display = "none";
+
+        // A new photo is required for updates, just like other required fields.
+        document.getElementById("photo").required = true;
         document.getElementById("formTitle").textContent = "Update Student";
         document.getElementById("saveButton").textContent = "Update Student";
         document.getElementById("cancelButton").hidden = false;
@@ -445,9 +486,16 @@
         editingId = null;
 
         document.getElementById("password").required = true;
+        document.getElementById("password").parentElement.style.display = "";
+        document.getElementById("photo").required = true;
         document.getElementById("formTitle").textContent = "Add Student";
         document.getElementById("saveButton").textContent = "Create Student";
         document.getElementById("cancelButton").hidden = true;
+        document.getElementById("photo").value = "";
+
+        const photoPreview = document.getElementById("photoPreview");
+        photoPreview.removeAttribute("src");
+        photoPreview.style.display = "none";
     }
 
     document.getElementById("cancelButton")
