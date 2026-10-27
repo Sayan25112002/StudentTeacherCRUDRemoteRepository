@@ -140,6 +140,12 @@
 
         <form id="studentForm">
             <div class="form-grid">
+
+                <div>
+                    <label for="photo">Student Photo</label>
+                    <input type="file" id="photo" accept="image/*">
+                </div>
+
                 <div>
                     <label for="firstName">First Name</label>
                     <input type="text" id="firstName" required>
@@ -198,6 +204,7 @@
                 <thead>
                 <tr>
                     <th>ID</th>
+                    <th>Photo</th>
                     <th>First Name</th>
                     <th>Last Name</th>
                     <th>Email</th>
@@ -295,8 +302,31 @@
         students.forEach(student => {
             const row = document.createElement("tr");
 
+            const idCell = document.createElement("td");
+            idCell.textContent = student.id ?? "";
+            row.appendChild(idCell);
+
+            const photoCell = document.createElement("td");
+
+            if (student.photoPath) {
+                const fileName = student.photoPath.split(/[\\/]/).pop();
+
+                const img = document.createElement("img");
+                img.src = `http://localhost:8080/images/${encodeURIComponent(fileName)}`;
+                img.alt = "Student Photo";
+                img.width = 60;
+                img.height = 60;
+                img.style.objectFit = "cover";
+                img.style.borderRadius = "6px";
+
+                photoCell.appendChild(img);
+            } else {
+                photoCell.textContent = "No photo";
+            }
+
+            row.appendChild(photoCell);
+
             [
-                student.id,
                 student.firstName,
                 student.lastName,
                 student.email,
@@ -330,11 +360,20 @@
         event.preventDefault();
 
         const student = getFormData();
+        const photo = document.getElementById("photo").files[0];
         const isEditing = editingId !== null;
 
-        // Do not send a blank password when updating.
-        if (isEditing && !student.password) {
-            delete student.password;
+        const formData = new FormData();
+
+        Object.entries(student).forEach(([key, value]) => {
+            if (key === "password" && isEditing && !value) {
+                return;
+            }
+            formData.append(key, value);
+        });
+
+        if (photo) {
+            formData.append("photo", photo);
         }
 
         try {
@@ -342,10 +381,7 @@
                 isEditing ? API.update(editingId) : API.create,
                 {
                     method: isEditing ? "PUT" : "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(student)
+                    body: formData
                 }
             );
 

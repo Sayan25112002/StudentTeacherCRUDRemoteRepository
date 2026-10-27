@@ -13,6 +13,8 @@ public class StudentResponseDto {
 
     private Long id;
 
+    private String photoPath;
+
     private String firstName;
 
     private String lastName;

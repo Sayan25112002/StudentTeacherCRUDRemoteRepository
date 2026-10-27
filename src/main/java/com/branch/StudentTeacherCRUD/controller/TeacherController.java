@@ -6,6 +6,7 @@ import com.branch.StudentTeacherCRUD.service.TeacherService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class TeacherController {
     private final TeacherService teacherService;
 
     @PostMapping("/createTeacher")
-    public TeacherResponseDto createTeacher(@RequestBody TeacherRequestDto teacher) {
+    public TeacherResponseDto createTeacher(@ModelAttribute TeacherRequestDto teacher) throws IOException {
         return teacherService.createTeacher(teacher);
     }
 
@@ -26,7 +27,7 @@ public class TeacherController {
     }
 
     @PutMapping("/updateTeacher")
-    public TeacherResponseDto updateTeacher(@RequestBody TeacherRequestDto teacher, @RequestParam Long id) {
+    public TeacherResponseDto updateTeacher(@ModelAttribute TeacherRequestDto teacher, @RequestParam Long id) throws IOException {
         return teacherService.updateTeacher(teacher, id);
     }
 

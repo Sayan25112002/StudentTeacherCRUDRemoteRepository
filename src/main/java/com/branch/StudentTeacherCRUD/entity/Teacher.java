@@ -18,6 +18,8 @@ public class Teacher {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String photoPath;
+
     private String name;
 
     private String email;

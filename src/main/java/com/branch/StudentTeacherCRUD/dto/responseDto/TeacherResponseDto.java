@@ -16,6 +16,8 @@ public class TeacherResponseDto {
 
     private Long id;
 
+    private String photoPath;
+
     private String name;
 
     private String email;
