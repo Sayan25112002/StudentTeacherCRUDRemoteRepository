@@ -12,7 +12,10 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.*;
+
+import static com.branch.StudentTeacherCRUD.service.FileUploadService.saveFile;
 
 @Service
 @RequiredArgsConstructor
@@ -23,8 +26,9 @@ public class TeacherServiceImpl implements TeacherService {
     private final StudentRepository studentRepository;
 
     @Override
-    public TeacherResponseDto createTeacher(TeacherRequestDto teacherRequestDto) {
+    public TeacherResponseDto createTeacher(TeacherRequestDto teacherRequestDto) throws IOException {
         Teacher teacher = teacherMapper.toTeacher(teacherRequestDto);
+        teacher.setPhotoPath(saveFile(teacherRequestDto.getPhoto()));
         Teacher savedTeacher = teacherRepository.save(teacher);
         return teacherMapper.toTeacherResponseDto(savedTeacher);
     }
@@ -39,8 +43,11 @@ public class TeacherServiceImpl implements TeacherService {
 
 
     @Override
-    public TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id) {
+    public TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id) throws IOException {
         Teacher teacher = teacherRepository.findById(id).orElseThrow(()->new EntityNotFoundException("Teacher not found"));
+        if(teacherRequestDto.getPhoto() != null){
+            teacher.setPhotoPath(saveFile(teacherRequestDto.getPhoto()));
+        }
         if(teacherRequestDto.getName()!=null){
             teacher.setName(teacherRequestDto.getName());
         }

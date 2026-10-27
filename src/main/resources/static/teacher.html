@@ -144,6 +144,12 @@
 
         <form id="teacherForm">
             <div class="form-grid">
+
+                <div>
+                    <label for="photo">Teacher Photo</label>
+                    <input type="file" id="photo" accept="image/*">
+                </div>
+
                 <div>
                     <label for="name">Name</label>
                     <input type="text" id="name" required>
@@ -202,6 +208,7 @@
                 <thead>
                 <tr>
                     <th>ID</th>
+                    <th>Photo</th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Contact Number</th>
@@ -326,8 +333,31 @@
         teachers.forEach(teacher => {
             const row = document.createElement("tr");
 
+
+            const idCell = document.createElement("td");
+            idCell.textContent = teacher.id ?? "";
+            row.appendChild(idCell);
+
+            const photoCell = document.createElement("td");
+
+            if (teacher.photoPath) {
+                const fileName = teacher.photoPath.split(/[\\/]/).pop();
+
+                const img = document.createElement("img");
+                img.src = `http://localhost:8080/images/${encodeURIComponent(fileName)}`;
+                img.alt = "Teacher Photo";
+                img.width = 60;
+                img.height = 60;
+                img.style.objectFit = "cover";
+                img.style.borderRadius = "6px";
+
+                photoCell.appendChild(img);
+            } else {
+                photoCell.textContent = "No photo";
+            }
+
+            row.appendChild(photoCell);
             [
-                teacher.id,
                 teacher.name,
                 teacher.email,
                 teacher.contactNo,
@@ -339,6 +369,7 @@
                 cell.textContent = value ?? "";
                 row.appendChild(cell);
             });
+
 
             const actions = document.createElement("td");
 
@@ -375,19 +406,29 @@
         });
     }
 
+
     form.addEventListener("submit", async event => {
         event.preventDefault();
 
         const teacher = getFormData();
+        const photo = document.getElementById("photo").files[0];
         const isEditing = editingId !== null;
 
-        if (isEditing && !teacher.password) {
-            delete teacher.password;
+        const formData = new FormData();
+
+        Object.entries(teacher).forEach(([key, value]) => {
+            if (key === "password" && isEditing && !value) {
+                return;
+            }
+
+            formData.append(key, value);
+        });
+
+        if (photo) {
+            formData.append("photo", photo);
         }
 
-        const url = new URL(
-            isEditing ? API.update : API.create
-        );
+        const url = new URL(isEditing ? API.update : API.create);
 
         if (isEditing) {
             url.searchParams.set("id", editingId);
@@ -396,10 +437,7 @@
         try {
             await request(url.toString(), {
                 method: isEditing ? "PUT" : "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(teacher)
+                body: formData
             });
 
             resetForm();
@@ -411,11 +449,10 @@
                     : "Teacher created successfully."
             );
         } catch (error) {
-            showMessage(
-                "Operation failed: " + error.message
-            );
+            showMessage("Operation failed: " + error.message);
         }
     });
+
 
     function editTeacher(id) {
         const teacher = teachers.find(

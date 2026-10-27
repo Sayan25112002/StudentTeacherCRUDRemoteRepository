@@ -15,6 +15,8 @@ public class Student {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String photoPath;
+
     private String firstName;
 
     private String lastName;
