@@ -86,10 +86,6 @@
             background: #d63838;
         }
 
-        .assign {
-            background: #16804a;
-        }
-
         .actions {
             margin-top: 18px;
         }
@@ -122,6 +118,22 @@
             overflow-wrap: anywhere;
         }
 
+        .sort-button {
+            background: transparent;
+            color: white;
+            font-weight: bold;
+            font-size: inherit;
+            font-family: inherit;
+            border: none;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .sort-button:hover {
+            text-decoration: underline;
+        }
+
         @media (max-width: 600px) {
             body {
                 padding: 12px;
@@ -133,458 +145,318 @@
         }
     </style>
 </head>
-
 <body>
 <div class="container">
-
     <h1>Student Teacher Management System</h1>
 
     <section class="card">
         <h2 id="formTitle">Add Teacher</h2>
-
         <form id="teacherForm">
             <div class="form-grid">
-
                 <div>
                     <label for="photo">Teacher Photo</label>
-                    <input type="file" id="photo" accept="image/*">
+                    <input type="file" id="photo" accept="image/*" required>
+                    <img id="photoPreview" alt="Current Teacher Photo" width="100" height="100"
+                         style="display: none; object-fit: cover; margin-top: 10px;">
                 </div>
-
-                <div>
-                    <label for="name">Name</label>
-                    <input type="text" id="name" required>
-                </div>
-
-                <div>
-                    <label for="email">Email</label>
-                    <input type="email" id="email" required>
-                </div>
-
-                <div>
-                    <label for="contactNo">Contact Number</label>
-                    <input type="tel" id="contactNo" required>
-                </div>
-
-                <div>
-                    <label for="password">Password</label>
-                    <input type="password" id="password" required>
-                </div>
-
-                <div>
-                    <label for="address">Address</label>
-                    <textarea id="address" rows="3" required></textarea>
-                </div>
-
-                <div>
-                    <label for="designation">Designation</label>
-                    <input type="text" id="designation" required>
-                </div>
+                <div><label for="name">Name</label><input type="text" id="name" required></div>
+                <div><label for="email">Email</label><input type="email" id="email" required></div>
+                <div><label for="contactNo">Contact Number</label><input type="tel" id="contactNo" required></div>
+                <div id="passwordField"><label for="password">Password</label><input type="password" id="password" required></div>
+                <div><label for="address">Address</label><textarea id="address" rows="3" required></textarea></div>
+                <div><label for="designation">Designation</label><input type="text" id="designation" required></div>
             </div>
-
             <div class="actions">
-                <button type="submit" class="primary" id="saveButton">
-                    Create Teacher
-                </button>
-
-                <button type="button" class="secondary"
-                        id="cancelButton" hidden>
-                    Cancel Edit
-                </button>
+                <button type="submit" class="primary" id="saveButton">Create Teacher</button>
+                <button type="button" class="secondary" id="cancelButton" hidden>Cancel Edit</button>
             </div>
         </form>
-
         <p id="message" role="status" aria-live="polite"></p>
     </section>
 
     <section class="card">
         <h2>Teacher Records</h2>
-
-        <button type="button" class="primary" id="refreshButton">
-            Refresh Records
-        </button>
-
+        <button type="button" class="primary" id="refreshButton">Refresh Records</button>
         <div class="table-wrapper">
             <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
+                <thead><tr>
+                    <th><button type="button" class="sort-button" data-sort="serial">Serial ID ↕</button></th>
                     <th>Photo</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Contact Number</th>
-                    <th>Address</th>
-                    <th>Designation</th>
-                    <th>Assigned Students</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-
+                    <th><button type="button" class="sort-button" data-sort="name">Name ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="email">Email ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="contactNo">Contact Number ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="address">Address ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="designation">Designation ↕</button></th>
+                    <th>Assigned Students</th><th>Actions</th>
+                </tr></thead>
                 <tbody id="teacherTable"></tbody>
             </table>
         </div>
     </section>
-
 </div>
 
 <script>
     const API = {
         create: "http://localhost:8080/createTeacher",
         read: "http://localhost:8080/readTeacher",
-        update: "http://localhost:8080/updateTeacher",
-        delete: "http://localhost:8080/deleteTeacher",
+        update: id => `http://localhost:8080/updateTeacher?id=${encodeURIComponent(id)}`,
+        delete: id => `http://localhost:8080/deleteTeacher?id=${encodeURIComponent(id)}`,
         assign: "http://localhost:8080/mapStudentsToTeacher"
     };
 
     const form = document.getElementById("teacherForm");
     const table = document.getElementById("teacherTable");
     const message = document.getElementById("message");
-
     let editingId = null;
+    let editingPhotoPath = null;
     let teachers = [];
+    let sortColumn = "serial";
+    let sortDirection = "asc";
 
     async function request(url, options = {}) {
         const response = await fetch(url, options);
-
         if (!response.ok) {
             const details = await response.text();
-            throw new Error(
-                details || `Request failed: ${response.status}`
-            );
+            throw new Error(details || `Request failed: ${response.status}`);
         }
-
-        if (response.status === 204) {
-            return null;
-        }
-
-        const contentType =
-            response.headers.get("content-type") || "";
-
-        return contentType.includes("application/json")
-            ? response.json()
-            : null;
+        if (response.status === 204) return null;
+        const contentType = response.headers.get("content-type") || "";
+        return contentType.includes("application/json") ? response.json() : null;
     }
 
-    function showMessage(text) {
-        message.textContent = text;
-    }
+    function showMessage(text) { message.textContent = text; }
 
     function getFormData() {
         return {
             name: document.getElementById("name").value.trim(),
             email: document.getElementById("email").value.trim(),
-            contactNo:
-                document.getElementById("contactNo").value.trim(),
-            password:
-            document.getElementById("password").value,
-            address:
-                document.getElementById("address").value.trim(),
-            designation:
-                document.getElementById("designation").value.trim()
+            contactNo: document.getElementById("contactNo").value.trim(),
+            password: document.getElementById("password").value,
+            address: document.getElementById("address").value.trim(),
+            designation: document.getElementById("designation").value.trim()
         };
     }
+
+    document.getElementById("photo").addEventListener("change", function () {
+        const preview = document.getElementById("photoPreview");
+        const photo = this.files[0];
+        if (photo) {
+            preview.src = URL.createObjectURL(photo);
+            preview.style.display = "block";
+        } else {
+            preview.removeAttribute("src");
+            preview.style.display = "none";
+        }
+    });
 
     async function loadTeachers() {
         try {
             const data = await request(API.read);
-
-            if (!Array.isArray(data)) {
-                throw new Error(
-                    "Expected a list of teachers from the API."
-                );
-            }
-
+            if (!Array.isArray(data)) throw new Error("Expected a list of teachers from the API.");
             teachers = data;
             renderTeachers();
         } catch (error) {
-            showMessage(
-                "Could not load teachers: " + error.message
-            );
+            showMessage("Could not load teachers: " + error.message);
         }
     }
 
+    function updateSortArrows() {
+        document.querySelectorAll(".sort-button").forEach(button => {
+            const column = button.dataset.sort;
+            const name = button.textContent.replace(/[↑↓↕]/g, "").trim();
+            button.textContent = name + (column === sortColumn ? (sortDirection === "asc" ? " ↑" : " ↓") : " ↕");
+        });
+    }
+
     function getStudentNames(teacher) {
-        if (!Array.isArray(teacher.students)) {
-            return "";
-        }
-
+        if (!Array.isArray(teacher.students)) return "";
         return teacher.students.map(student => {
-            const name =
-                `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim();
-
+            const name = `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim();
             return name || `ID ${student.id}`;
         }).join(", ");
     }
 
     function renderTeachers() {
         table.replaceChildren();
+        const sorted = [...teachers].sort((a, b) => {
+            let result;
 
-        if (teachers.length === 0) {
+            if (sortColumn === "serial") {
+                result = teachers.indexOf(a) - teachers.indexOf(b);
+            } else {
+                const aValue = a[sortColumn] ?? "";
+                const bValue = b[sortColumn] ?? "";
+
+                result = String(aValue).localeCompare(
+                    String(bValue),
+                    undefined,
+                    { numeric: true, sensitivity: "base" }
+                );
+            }
+
+            return sortDirection === "asc" ? result : -result;
+        });
+
+        if (sorted.length === 0) {
             const row = document.createElement("tr");
             const cell = document.createElement("td");
-
-            cell.colSpan = 8;
+            cell.colSpan = 9;
             cell.textContent = "No teacher records found.";
-
             row.appendChild(cell);
             table.appendChild(row);
+            updateSortArrows();
             return;
         }
 
-        teachers.forEach(teacher => {
+        sorted.forEach(teacher => {
             const row = document.createElement("tr");
-
-
-            const idCell = document.createElement("td");
-            idCell.textContent = teacher.id ?? "";
-            row.appendChild(idCell);
+            const serialCell = document.createElement("td");
+            serialCell.textContent = teachers.indexOf(teacher) + 1;
+            row.appendChild(serialCell);
 
             const photoCell = document.createElement("td");
-
             if (teacher.photoPath) {
                 const fileName = teacher.photoPath.split(/[\\/]/).pop();
-
                 const img = document.createElement("img");
                 img.src = `http://localhost:8080/images/${encodeURIComponent(fileName)}`;
                 img.alt = "Teacher Photo";
-                img.width = 60;
-                img.height = 60;
-                img.style.objectFit = "cover";
-                img.style.borderRadius = "6px";
-
+                img.width = 60; img.height = 60;
+                img.style.objectFit = "cover"; img.style.borderRadius = "6px";
                 photoCell.appendChild(img);
-            } else {
-                photoCell.textContent = "No photo";
-            }
-
+            } else photoCell.textContent = "No photo";
             row.appendChild(photoCell);
-            [
-                teacher.name,
-                teacher.email,
-                teacher.contactNo,
-                teacher.address,
-                teacher.designation,
-                getStudentNames(teacher)
-            ].forEach(value => {
+
+            [teacher.name, teacher.email, teacher.contactNo, teacher.address, teacher.designation, getStudentNames(teacher)].forEach(value => {
                 const cell = document.createElement("td");
                 cell.textContent = value ?? "";
                 row.appendChild(cell);
             });
 
-
             const actions = document.createElement("td");
-
             const editButton = document.createElement("button");
-            editButton.textContent = "Edit";
-            editButton.className = "edit";
-            editButton.addEventListener("click", () => {
-                editTeacher(teacher.id);
-            });
-
+            editButton.textContent = "Edit"; editButton.className = "edit";
+            editButton.addEventListener("click", () => editTeacher(teacher.id));
             const assignButton = document.createElement("button");
-            assignButton.textContent = "Assign Students";
-            assignButton.className = "assign";
+            assignButton.textContent = "Assign Students"; assignButton.className = "assign";
             assignButton.addEventListener("click", () => {
-                window.location.href =
-                    `assignStudents.html?teacherId=${encodeURIComponent(teacher.id)}`;
+                window.location.href = `assignStudents.html?teacherId=${encodeURIComponent(teacher.id)}`;
             });
-
             const deleteButton = document.createElement("button");
-            deleteButton.textContent = "Delete";
-            deleteButton.className = "delete";
-            deleteButton.addEventListener("click", () => {
-                deleteTeacher(teacher.id);
-            });
-
-            actions.append(
-                editButton,
-                assignButton,
-                deleteButton
-            );
-
+            deleteButton.textContent = "Delete"; deleteButton.className = "delete";
+            deleteButton.addEventListener("click", () => deleteTeacher(teacher.id));
+            actions.append(editButton, assignButton, deleteButton);
             row.appendChild(actions);
             table.appendChild(row);
         });
+        updateSortArrows();
     }
 
+    async function getExistingPhotoFile(photoPath) {
+        const fileName = photoPath.split(/[\\/]/).pop();
+        const response = await fetch(`http://localhost:8080/images/${encodeURIComponent(fileName)}`);
+        if (!response.ok) throw new Error("Could not load the existing photo.");
+        const blob = await response.blob();
+        return new File([blob], fileName, { type: blob.type || "image/jpeg" });
+    }
 
     form.addEventListener("submit", async event => {
         event.preventDefault();
-
         const teacher = getFormData();
         const photo = document.getElementById("photo").files[0];
         const isEditing = editingId !== null;
-
         const formData = new FormData();
 
         Object.entries(teacher).forEach(([key, value]) => {
-            if (key === "password" && isEditing && !value) {
-                return;
-            }
-
+            // Password is required on create and omitted from update requests.
+            if (key === "password" && isEditing) return;
             formData.append(key, value);
         });
 
-        if (photo) {
-            formData.append("photo", photo);
-        }
-
-        const url = new URL(isEditing ? API.update : API.create);
-
-        if (isEditing) {
-            url.searchParams.set("id", editingId);
-        }
-
         try {
-            await request(url.toString(), {
+            if (photo) {
+                formData.append("photo", photo);
+            } else if (isEditing && editingPhotoPath) {
+                formData.append("photo", await getExistingPhotoFile(editingPhotoPath));
+                formData.append("photoPath", editingPhotoPath);
+            }
+            await request(isEditing ? API.update(editingId) : API.create, {
                 method: isEditing ? "PUT" : "POST",
                 body: formData
             });
-
             resetForm();
             await loadTeachers();
-
-            showMessage(
-                isEditing
-                    ? "Teacher updated successfully."
-                    : "Teacher created successfully."
-            );
+            showMessage(isEditing ? "Teacher updated successfully." : "Teacher created successfully.");
         } catch (error) {
             showMessage("Operation failed: " + error.message);
         }
     });
 
-
     function editTeacher(id) {
-        const teacher = teachers.find(
-            item => String(item.id) === String(id)
-        );
-
-        if (!teacher) {
-            showMessage("Teacher record not found.");
-            return;
-        }
-
+        const teacher = teachers.find(item => String(item.id) === String(id));
+        if (!teacher) { showMessage("Teacher record not found."); return; }
         editingId = id;
-
-        document.getElementById("name").value =
-            teacher.name ?? "";
-        document.getElementById("email").value =
-            teacher.email ?? "";
-        document.getElementById("contactNo").value =
-            teacher.contactNo ?? "";
+        editingPhotoPath = teacher.photoPath ?? null;
+        document.getElementById("photo").value = "";
+        const preview = document.getElementById("photoPreview");
+        if (teacher.photoPath) {
+            const fileName = teacher.photoPath.split(/[\\/]/).pop();
+            preview.src = `http://localhost:8080/images/${encodeURIComponent(fileName)}`;
+            preview.style.display = "block";
+        } else {
+            preview.removeAttribute("src"); preview.style.display = "none";
+        }
+        document.getElementById("name").value = teacher.name ?? "";
+        document.getElementById("email").value = teacher.email ?? "";
+        document.getElementById("contactNo").value = teacher.contactNo ?? "";
         document.getElementById("password").value = "";
-        document.getElementById("address").value =
-            teacher.address ?? "";
-        document.getElementById("designation").value =
-            teacher.designation ?? "";
-
+        document.getElementById("address").value = teacher.address ?? "";
+        document.getElementById("designation").value = teacher.designation ?? "";
         document.getElementById("password").required = false;
-        document.getElementById("formTitle").textContent =
-            "Update Teacher";
-        document.getElementById("saveButton").textContent =
-            "Update Teacher";
+        document.getElementById("passwordField").style.display = "none";
+        document.getElementById("photo").required = false;
+        document.getElementById("formTitle").textContent = "Update Teacher";
+        document.getElementById("saveButton").textContent = "Update Teacher";
         document.getElementById("cancelButton").hidden = false;
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-    }
-
-    async function assignStudents(teacherId) {
-        const input = prompt(
-            `Enter student IDs to assign to Teacher ID ${teacherId}, ` +
-            "separated by commas (example: 1,2):"
-        );
-
-        if (input === null) {
-            return;
-        }
-
-        const values = input.split(",").map(value => value.trim());
-
-        if (
-            values.length === 0 ||
-            values.some(value => !/^[1-9]\d*$/.test(value))
-        ) {
-            showMessage(
-                "Enter valid positive student IDs separated by commas."
-            );
-            return;
-        }
-
-        const ids = [...new Set(values)];
-
-        const url = new URL(API.assign);
-        url.searchParams.set("id", teacherId);
-
-        ids.forEach(id => {
-            url.searchParams.append("ids", id);
-        });
-
-        try {
-            await request(url.toString(), {
-                method: "POST"
-            });
-
-            await loadTeachers();
-
-            showMessage(
-                `Students assigned to Teacher ID ${teacherId} successfully.`
-            );
-        } catch (error) {
-            showMessage(
-                "Student assignment failed: " + error.message
-            );
-        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     async function deleteTeacher(id) {
-        if (!confirm(
-            "Are you sure you want to delete this teacher?"
-        )) {
-            return;
-        }
-
-        const url = new URL(API.delete);
-        url.searchParams.set("id", id);
-
+        if (!confirm("Are you sure you want to delete this teacher?")) return;
         try {
-            await request(url.toString(), {
-                method: "DELETE"
-            });
-
-            if (String(editingId) === String(id)) {
-                resetForm();
-            }
-
+            await request(API.delete(id), { method: "DELETE" });
+            if (String(editingId) === String(id)) resetForm();
             await loadTeachers();
             showMessage("Teacher deleted successfully.");
         } catch (error) {
-            showMessage(
-                "Delete failed: " + error.message
-            );
+            showMessage("Delete failed: " + error.message);
         }
     }
 
     function resetForm() {
         form.reset();
         editingId = null;
-
+        editingPhotoPath = null;
         document.getElementById("password").required = true;
-        document.getElementById("formTitle").textContent =
-            "Add Teacher";
-        document.getElementById("saveButton").textContent =
-            "Create Teacher";
+        document.getElementById("passwordField").style.display = "";
+        document.getElementById("photo").required = true;
+        document.getElementById("formTitle").textContent = "Add Teacher";
+        document.getElementById("saveButton").textContent = "Create Teacher";
         document.getElementById("cancelButton").hidden = true;
+        document.getElementById("photo").value = "";
+        const preview = document.getElementById("photoPreview");
+        preview.removeAttribute("src"); preview.style.display = "none";
     }
 
-    document.getElementById("cancelButton")
-        .addEventListener("click", resetForm);
-
-    document.getElementById("refreshButton")
-        .addEventListener("click", loadTeachers);
-
+    document.getElementById("cancelButton").addEventListener("click", resetForm);
+    document.getElementById("refreshButton").addEventListener("click", loadTeachers);
+    document.querySelectorAll(".sort-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const column = button.dataset.sort;
+            if (sortColumn === column) sortDirection = sortDirection === "asc" ? "desc" : "asc";
+            else { sortColumn = column; sortDirection = "asc"; }
+            renderTeachers();
+        });
+    });
     loadTeachers();
 </script>
 </body>

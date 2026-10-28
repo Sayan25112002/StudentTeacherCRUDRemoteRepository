@@ -21,8 +21,10 @@ public class Student {
 
     private String lastName;
 
+    @Column(unique = true)
     private String email;
 
+    @Column(unique = true)
     private String contactNo;
 
     private String password;
