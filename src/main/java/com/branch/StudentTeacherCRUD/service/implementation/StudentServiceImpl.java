@@ -11,6 +11,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.awt.print.Pageable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -33,9 +34,8 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public List<StudentResponseDto> readStudents() {
-        List<Student> students = studentRepository.findAll();
-        return studentMapper.toStudentResponseDtoList(students);
+    public List<StudentResponseDto> readStudents(Pageable pageable) {
+        return studentRepository.findAll(pageable).getContent();
     }
 
     @Override

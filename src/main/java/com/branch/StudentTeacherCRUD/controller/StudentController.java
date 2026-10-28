@@ -7,6 +7,7 @@ import com.branch.StudentTeacherCRUD.validations.Create;
 import com.branch.StudentTeacherCRUD.validations.Update;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,8 +26,8 @@ public class StudentController {
     }
 
     @GetMapping("/readStudent")
-    public List<StudentResponseDto> readStudent(){
-        return studentService.readStudents();
+    public List<StudentResponseDto> readStudent(@RequestParam Integer pageNumber, @RequestParam Integer pageSize){
+        return studentService.readStudents(PageRequest.of(pageNumber-1,pageSize));
     }
 
     @PutMapping("/updateStudent")
