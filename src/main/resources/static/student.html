@@ -118,6 +118,22 @@
             overflow-wrap: anywhere;
         }
 
+        .sort-button {
+            background: transparent;
+            color: white;
+            font-weight: bold;
+            font-size: inherit;
+            font-family: inherit;
+            border: none;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .sort-button:hover {
+            text-decoration: underline;
+        }
+
         @media (max-width: 600px) {
             body {
                 padding: 12px;
@@ -140,7 +156,6 @@
 
         <form id="studentForm">
             <div class="form-grid">
-
                 <div>
                     <label for="photo">Student Photo</label>
                     <input type="file" id="photo" accept="image/*" required>
@@ -188,8 +203,7 @@
                     Create Student
                 </button>
 
-                <button type="button" class="secondary"
-                        id="cancelButton" hidden>
+                <button type="button" class="secondary" id="cancelButton" hidden>
                     Cancel Edit
                 </button>
             </div>
@@ -209,17 +223,16 @@
             <table>
                 <thead>
                 <tr>
-                    <th>ID</th>
+                    <th><button type="button" class="sort-button" data-sort="serial">Serial ID ↕</button></th>
                     <th>Photo</th>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Email</th>
-                    <th>Contact Number</th>
-                    <th>Address</th>
+                    <th><button type="button" class="sort-button" data-sort="firstName">First Name ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="lastName">Last Name ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="email">Email ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="contactNo">Contact Number ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="address">Address ↕</button></th>
                     <th>Actions</th>
                 </tr>
                 </thead>
-
                 <tbody id="studentTable"></tbody>
             </table>
         </div>
@@ -240,7 +253,10 @@
     const message = document.getElementById("message");
 
     let editingId = null;
+    let editingPhotoPath = null;
     let students = [];
+    let sortColumn = "id";
+    let sortDirection = "asc";
 
     async function request(url, options = {}) {
         const response = await fetch(url, options);
@@ -305,8 +321,41 @@
         }
     }
 
+    function updateSortArrows() {
+        document.querySelectorAll(".sort-button").forEach(button => {
+            const column = button.dataset.sort;
+            const columnName = button.textContent.replace(/[↑↓↕]/g, "").trim();
+
+            button.textContent = columnName +
+                (column === sortColumn
+                    ? (sortDirection === "asc" ? " ↑" : " ↓")
+                    : " ↕");
+        });
+    }
+
     function renderStudents() {
         table.replaceChildren();
+
+        const sortedStudents = [...students];
+
+        sortedStudents.sort((a, b) => {
+            let result;
+
+            if (sortColumn === "serial") {
+                result = students.indexOf(a) - students.indexOf(b);
+            } else {
+                const valueA = a[sortColumn] ?? "";
+                const valueB = b[sortColumn] ?? "";
+
+                result = String(valueA).localeCompare(
+                    String(valueB),
+                    undefined,
+                    { numeric: true, sensitivity: "base" }
+                );
+            }
+
+            return sortDirection === "asc" ? result : -result;
+        });
 
         if (students.length === 0) {
             const row = document.createElement("tr");
@@ -316,14 +365,16 @@
             cell.textContent = "No student records found.";
             row.appendChild(cell);
             table.appendChild(row);
+
+            updateSortArrows();
             return;
         }
 
-        students.forEach(student => {
+        sortedStudents.forEach((student, index) => {
             const row = document.createElement("tr");
 
             const idCell = document.createElement("td");
-            idCell.textContent = student.id ?? "";
+            idCell.textContent = students.indexOf(student) + 1;
             row.appendChild(idCell);
 
             const photoCell = document.createElement("td");
@@ -374,6 +425,23 @@
             row.appendChild(actions);
             table.appendChild(row);
         });
+
+        updateSortArrows();
+    }
+
+    // Re-fetches the existing image so it can be re-sent when no new photo is chosen.
+    async function getExistingPhotoFile(photoPath) {
+        const fileName = photoPath.split(/[\\/]/).pop();
+        const response = await fetch(
+            `http://localhost:8080/images/${encodeURIComponent(fileName)}`
+        );
+
+        if (!response.ok) {
+            throw new Error("Could not load the existing photo.");
+        }
+
+        const blob = await response.blob();
+        return new File([blob], fileName, { type: blob.type || "image/jpeg" });
     }
 
     form.addEventListener("submit", async event => {
@@ -393,11 +461,15 @@
             formData.append(key, value);
         });
 
-        if (photo) {
-            formData.append("photo", photo);
-        }
-
         try {
+            if (photo) {
+                formData.append("photo", photo);
+            } else if (isEditing && editingPhotoPath) {
+                // No new photo chosen: re-send the current one so the path is kept.
+                formData.append("photo", await getExistingPhotoFile(editingPhotoPath));
+                formData.append("photoPath", editingPhotoPath);
+            }
+
             await request(
                 isEditing ? API.update(editingId) : API.create,
                 {
@@ -426,6 +498,7 @@
         }
 
         editingId = id;
+        editingPhotoPath = student.photoPath ?? null;
 
         document.getElementById("photo").value = "";
 
@@ -433,15 +506,14 @@
 
         if (student.photoPath) {
             const fileName = student.photoPath.split(/[\\/]/).pop();
-
             photoPreview.src =
                 `http://localhost:8080/images/${encodeURIComponent(fileName)}`;
-
             photoPreview.style.display = "block";
         } else {
             photoPreview.removeAttribute("src");
             photoPreview.style.display = "none";
         }
+
         document.getElementById("firstName").value = student.firstName ?? "";
         document.getElementById("lastName").value = student.lastName ?? "";
         document.getElementById("email").value = student.email ?? "";
@@ -453,8 +525,8 @@
         document.getElementById("password").required = false;
         document.getElementById("password").parentElement.style.display = "none";
 
-        // A new photo is required for updates, just like other required fields.
-        document.getElementById("photo").required = true;
+        // Photo is optional while editing: the existing one is re-sent automatically.
+        document.getElementById("photo").required = false;
         document.getElementById("formTitle").textContent = "Update Student";
         document.getElementById("saveButton").textContent = "Update Student";
         document.getElementById("cancelButton").hidden = false;
@@ -484,6 +556,7 @@
     function resetForm() {
         form.reset();
         editingId = null;
+        editingPhotoPath = null;
 
         document.getElementById("password").required = true;
         document.getElementById("password").parentElement.style.display = "";
@@ -503,6 +576,21 @@
 
     document.getElementById("refreshButton")
         .addEventListener("click", loadStudents);
+
+    document.querySelectorAll(".sort-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const column = button.dataset.sort;
+
+            if (sortColumn === column) {
+                sortDirection = sortDirection === "asc" ? "desc" : "asc";
+            } else {
+                sortColumn = column;
+                sortDirection = "asc";
+            }
+
+            renderStudents();
+        });
+    });
 
     loadStudents();
 </script>

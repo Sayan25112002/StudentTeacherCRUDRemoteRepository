@@ -3,7 +3,10 @@ package com.branch.StudentTeacherCRUD.controller;
 import com.branch.StudentTeacherCRUD.dto.requestDto.TeacherRequestDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.TeacherResponseDto;
 import com.branch.StudentTeacherCRUD.service.TeacherService;
+import com.branch.StudentTeacherCRUD.validations.Create;
+import com.branch.StudentTeacherCRUD.validations.Update;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -17,7 +20,7 @@ public class TeacherController {
     private final TeacherService teacherService;
 
     @PostMapping("/createTeacher")
-    public TeacherResponseDto createTeacher(@ModelAttribute TeacherRequestDto teacher) throws IOException {
+    public TeacherResponseDto createTeacher(@ModelAttribute @Validated(Create.class) TeacherRequestDto teacher) throws IOException {
         return teacherService.createTeacher(teacher);
     }
 
@@ -27,7 +30,7 @@ public class TeacherController {
     }
 
     @PutMapping("/updateTeacher")
-    public TeacherResponseDto updateTeacher(@ModelAttribute TeacherRequestDto teacher, @RequestParam Long id) throws IOException {
+    public TeacherResponseDto updateTeacher(@ModelAttribute @Validated(Update.class) TeacherRequestDto teacher, @RequestParam Long id) throws IOException {
         return teacherService.updateTeacher(teacher, id);
     }
 

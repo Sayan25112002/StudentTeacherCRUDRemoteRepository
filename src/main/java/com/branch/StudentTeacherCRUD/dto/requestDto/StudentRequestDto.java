@@ -2,7 +2,6 @@ package com.branch.StudentTeacherCRUD.dto.requestDto;
 
 import com.branch.StudentTeacherCRUD.validations.Create;
 import com.branch.StudentTeacherCRUD.validations.Update;
-import jakarta.persistence.Column;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -34,12 +33,10 @@ public class StudentRequestDto {
     @NotNull(message = "Email must be provided", groups = {Update.class, Create.class})
     @NotBlank(message = "Email Must not be Blank", groups = {Update.class, Create.class})
     @Email(message = "It should be a proper email format", groups = {Update.class, Create.class})
-    @Column(unique = true)
     private String email;
 
     @NotNull(message = "Contact Number must be provided", groups = {Update.class, Create.class})
     @NotBlank(message = "Contact Number must not be Blank", groups = {Update.class, Create.class})
-    @Column(unique = true)
     @Size(min=10,max=10,message = "Contact Number must be of exactly 10 digits", groups = {Update.class, Create.class})
     private String contactNo;
 
