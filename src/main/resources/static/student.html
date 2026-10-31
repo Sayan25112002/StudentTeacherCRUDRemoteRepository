@@ -134,6 +134,52 @@
             text-decoration: underline;
         }
 
+        .table-controls {
+            display: flex;
+            align-items: end;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .table-controls > div {
+            min-width: 150px;
+            flex: 1;
+        }
+
+        .table-controls label {
+            margin-bottom: 7px;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        #pageInfo {
+            font-weight: bold;
+            margin: 0 8px;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 600px) {
+            .table-controls {
+                align-items: stretch;
+            }
+
+            .table-controls > div {
+                min-width: 100%;
+            }
+        }
+
         @media (max-width: 600px) {
             body {
                 padding: 12px;
@@ -219,11 +265,42 @@
             Refresh Records
         </button>
 
+        <div class="table-controls">
+            <div>
+                <label for="searchBy">Filter by</label>
+                <select id="searchBy">
+                    <option value="firstName">First Name</option>
+                    <option value="lastName">Last Name</option>
+                    <option value="email">Email</option>
+                    <option value="contactNo">Contact Number</option>
+                    <option value="address">Address</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="searchInput">Search</label>
+                <input type="text" id="searchInput" placeholder="Enter search value">
+            </div>
+
+            <button type="button" class="primary" id="searchButton">Search</button>
+            <button type="button" class="secondary" id="clearSearchButton">Clear</button>
+
+            <div>
+                <label for="pageSize">Records per page</label>
+                <select id="pageSize">
+                    <option value="5" selected>5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+        </div>
+
         <div class="table-wrapper">
             <table>
                 <thead>
                 <tr>
-                    <th><button type="button" class="sort-button" data-sort="serial">Serial ID ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="id">Serial ID ↕</button></th>
                     <th>Photo</th>
                     <th><button type="button" class="sort-button" data-sort="firstName">First Name ↕</button></th>
                     <th><button type="button" class="sort-button" data-sort="lastName">Last Name ↕</button></th>
@@ -235,6 +312,17 @@
                 </thead>
                 <tbody id="studentTable"></tbody>
             </table>
+            <div class="pagination">
+                <button type="button" class="secondary" id="previousButton">
+                    Previous
+                </button>
+
+                <span id="pageInfo">Page 1</span>
+
+                <button type="button" class="secondary" id="nextButton">
+                    Next
+                </button>
+            </div>
         </div>
     </section>
 
@@ -255,8 +343,13 @@
     let editingId = null;
     let editingPhotoPath = null;
     let students = [];
+    let pageNumber = 1;
+    let pageSize = 5;
     let sortColumn = "id";
-    let sortDirection = "asc";
+    let sortDirection = "ASC";
+    let searchBy = "";
+    let search = "";
+    let hasNextPage = false;
 
     async function request(url, options = {}) {
         const response = await fetch(url, options);
@@ -307,55 +400,102 @@
     });
 
     async function loadStudents() {
+        const params = new URLSearchParams({
+            pageNumber: String(pageNumber),
+            pageSize: String(pageSize),
+            sortBy: sortColumn,
+            sortDir: sortDirection
+        });
+
+        if (search && searchBy) {
+            params.set("searchBy", searchBy);
+            params.set("search", search);
+        }
+
         try {
-            const data = await request(API.read);
+            const data = await request(`${API.read}?${params.toString()}`);
 
             if (!Array.isArray(data)) {
                 throw new Error("Expected a list of students from the API.");
             }
 
             students = data;
+            hasNextPage = data.length === pageSize;
+
             renderStudents();
+            updatePagination();
         } catch (error) {
             showMessage("Could not load students: " + error.message);
         }
     }
 
-    function updateSortArrows() {
-        document.querySelectorAll(".sort-button").forEach(button => {
-            const column = button.dataset.sort;
-            const columnName = button.textContent.replace(/[↑↓↕]/g, "").trim();
+    function updatePagination() {
+        document.getElementById("pageInfo").textContent = `Page ${pageNumber}`;
 
-            button.textContent = columnName +
-                (column === sortColumn
-                    ? (sortDirection === "asc" ? " ↑" : " ↓")
-                    : " ↕");
-        });
+        document.getElementById("previousButton").disabled = pageNumber <= 1;
+        document.getElementById("nextButton").disabled = !hasNextPage;
     }
+
+    async function applySearch() {
+        searchBy = document.getElementById("searchBy").value;
+        search = document.getElementById("searchInput").value.trim();
+
+        if (!search) {
+            searchBy = "";
+        }
+
+        pageNumber = 1;
+        await loadStudents();
+    }
+
+    document.getElementById("searchButton")
+        .addEventListener("click", applySearch);
+
+    document.getElementById("searchInput")
+        .addEventListener("keydown", event => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                applySearch();
+            }
+        });
+
+    document.getElementById("clearSearchButton")
+        .addEventListener("click", async () => {
+            document.getElementById("searchInput").value = "";
+
+            search = "";
+            searchBy = "";
+            pageNumber = 1;
+
+            await loadStudents();
+        });
+
+    document.getElementById("pageSize")
+        .addEventListener("change", async event => {
+            pageSize = Number(event.target.value);
+            pageNumber = 1;
+
+            await loadStudents();
+        });
+
+    document.getElementById("previousButton")
+        .addEventListener("click", async () => {
+            if (pageNumber > 1) {
+                pageNumber--;
+                await loadStudents();
+            }
+        });
+
+    document.getElementById("nextButton")
+        .addEventListener("click", async () => {
+            if (hasNextPage) {
+                pageNumber++;
+                await loadStudents();
+            }
+        });
 
     function renderStudents() {
         table.replaceChildren();
-
-        const sortedStudents = [...students];
-
-        sortedStudents.sort((a, b) => {
-            let result;
-
-            if (sortColumn === "serial") {
-                result = students.indexOf(a) - students.indexOf(b);
-            } else {
-                const valueA = a[sortColumn] ?? "";
-                const valueB = b[sortColumn] ?? "";
-
-                result = String(valueA).localeCompare(
-                    String(valueB),
-                    undefined,
-                    { numeric: true, sensitivity: "base" }
-                );
-            }
-
-            return sortDirection === "asc" ? result : -result;
-        });
 
         if (students.length === 0) {
             const row = document.createElement("tr");
@@ -363,26 +503,26 @@
 
             cell.colSpan = 8;
             cell.textContent = "No student records found.";
+
             row.appendChild(cell);
             table.appendChild(row);
 
-            updateSortArrows();
             return;
         }
 
-        sortedStudents.forEach((student, index) => {
+        students.forEach(student => {
             const row = document.createElement("tr");
 
             const idCell = document.createElement("td");
-            idCell.textContent = students.indexOf(student) + 1;
+            idCell.textContent = student.id ?? "";
             row.appendChild(idCell);
 
             const photoCell = document.createElement("td");
 
             if (student.photoPath) {
                 const fileName = student.photoPath.split(/[\\/]/).pop();
-
                 const img = document.createElement("img");
+
                 img.src = `http://localhost:8080/images/${encodeURIComponent(fileName)}`;
                 img.alt = "Student Photo";
                 img.width = 60;
@@ -426,7 +566,6 @@
             table.appendChild(row);
         });
 
-        updateSortArrows();
     }
 
     // Re-fetches the existing image so it can be re-sent when no new photo is chosen.
@@ -577,20 +716,37 @@
     document.getElementById("refreshButton")
         .addEventListener("click", loadStudents);
 
-    document.querySelectorAll(".sort-button").forEach(button => {
-        button.addEventListener("click", () => {
-            const column = button.dataset.sort;
 
-            if (sortColumn === column) {
-                sortDirection = sortDirection === "asc" ? "desc" : "asc";
-            } else {
-                sortColumn = column;
-                sortDirection = "asc";
+    let sortingInProgress = false;
+
+    document.querySelectorAll(".sort-button").forEach(button => {
+        button.addEventListener("click", async () => {
+            if (sortingInProgress) {
+                return;
             }
 
-            renderStudents();
+            sortingInProgress = true;
+            button.disabled = true;
+
+            try {
+                const column = button.dataset.sort;
+
+                if (sortColumn === column) {
+                    sortDirection = sortDirection === "ASC" ? "DESC" : "ASC";
+                } else {
+                    sortColumn = column;
+                    sortDirection = "ASC";
+                }
+
+                pageNumber = 1;
+                await loadStudents();
+            } finally {
+                sortingInProgress = false;
+                button.disabled = false;
+            }
         });
     });
+
 
     loadStudents();
 </script>

@@ -9,9 +9,11 @@ import com.branch.StudentTeacherCRUD.repository.StudentRepository;
 import com.branch.StudentTeacherCRUD.service.StudentService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.awt.print.Pageable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -34,8 +36,31 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public List<StudentResponseDto> readStudents(Pageable pageable) {
-        return studentRepository.findAll(pageable).getContent();
+    public List<StudentResponseDto> readStudents(Integer pageNumber, Integer pageSize, String sortBy, String sortDir, String searchBy, String search) {
+        List<Student> students;
+        Sort sort;
+        if(sortDir.equalsIgnoreCase("ASC")){
+            sort = Sort.by(sortBy).ascending();
+        }else {
+            sort = Sort.by(sortBy).descending();
+        }
+        Pageable pageable = PageRequest.of(pageNumber-1, pageSize, sort);
+        if(search == null){
+            students = studentRepository.findAll(pageable).getContent();
+        }else if(searchBy.equalsIgnoreCase("firstName")){
+            students = studentRepository.findByFirstName(search,pageable).getContent();
+        }else if(searchBy.equalsIgnoreCase("lastName")) {
+            students = studentRepository.findByLastName(search, pageable).getContent();
+        }else if(searchBy.equalsIgnoreCase("email")) {
+            students = studentRepository.findByEmail(search, pageable).getContent();
+        }else if(searchBy.equalsIgnoreCase("contactNo")) {
+            students = studentRepository.findByContactNo(search, pageable).getContent();
+        }else if(searchBy.equalsIgnoreCase("address")) {
+            students = studentRepository.findByAddress(search, pageable).getContent();
+        }else {
+            throw new IllegalArgumentException("Invalid Search Arguments");
+        }
+        return studentMapper.toStudentResponseDtoList(students);
     }
 
     @Override

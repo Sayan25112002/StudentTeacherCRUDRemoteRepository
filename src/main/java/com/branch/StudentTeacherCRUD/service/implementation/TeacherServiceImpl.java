@@ -10,6 +10,9 @@ import com.branch.StudentTeacherCRUD.repository.TeacherRepository;
 import com.branch.StudentTeacherCRUD.service.TeacherService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -33,14 +36,33 @@ public class TeacherServiceImpl implements TeacherService {
         return teacherMapper.toTeacherResponseDto(savedTeacher);
     }
 
-
     @Override
-    public LinkedList<TeacherResponseDto> readTeachers() {
-        List<Teacher> teachers = teacherRepository.findAll();
-        LinkedList<Teacher> teacherList = new LinkedList<>(teachers);
-        return teacherMapper.toTeacherResponseDtoList(teacherList);
+    public List<TeacherResponseDto> readTeachers(Integer pageNumber, Integer pageSize, String sortBy, String sortDir, String searchBy, String search) {
+        List<Teacher> teachers;
+        Sort sort;
+        if(sortDir.equalsIgnoreCase("ASC")) {
+            sort = Sort.by(sortBy).ascending();
+        }else {
+            sort = Sort.by(sortBy).descending();
+        }
+        Pageable pageable = PageRequest.of(pageNumber-1, pageSize, sort);
+        if(search==null){
+            teachers = teacherRepository.findAll(pageable).getContent();
+        }else if(searchBy.equalsIgnoreCase("name")) {
+            teachers = teacherRepository.findByName(search, pageable).getContent();
+        }else if (searchBy.equalsIgnoreCase("email")) {
+            teachers = teacherRepository.findByEmail(search, pageable).getContent();
+        }else if (searchBy.equalsIgnoreCase("contactNo")) {
+            teachers = teacherRepository.findByContactNo(search, pageable).getContent();
+        }else if (searchBy.equalsIgnoreCase("address")) {
+            teachers = teacherRepository.findByAddress(search, pageable).getContent();
+        }else if (searchBy.equalsIgnoreCase("designation")){
+            teachers = teacherRepository.findByDesignation(search, pageable).getContent();
+        }else {
+            throw new IllegalArgumentException("Invalid Search Arguments");
+        }
+        return teacherMapper.toTeacherResponseDtoList(teachers);
     }
-
 
     @Override
     public TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id) throws IOException {

@@ -8,6 +8,8 @@ import com.branch.StudentTeacherCRUD.validations.Update;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,8 +28,13 @@ public class StudentController {
     }
 
     @GetMapping("/readStudent")
-    public List<StudentResponseDto> readStudent(@RequestParam Integer pageNumber, @RequestParam Integer pageSize){
-        return studentService.readStudents(PageRequest.of(pageNumber-1,pageSize));
+    public List<StudentResponseDto> readStudent(@RequestParam(required = false, defaultValue = "1") Integer pageNumber,
+                                                @RequestParam(required = false, defaultValue = "5") Integer pageSize,
+                                                @RequestParam(required = false, defaultValue = "id") String sortBy,
+                                                @RequestParam(required = false, defaultValue = "ASC") String sortDir,
+                                                @RequestParam(required = false) String searchBy,
+                                                @RequestParam(required = false) String search) {
+        return studentService.readStudents(pageNumber, pageSize, sortBy, sortDir, searchBy, search);
     }
 
     @PutMapping("/updateStudent")

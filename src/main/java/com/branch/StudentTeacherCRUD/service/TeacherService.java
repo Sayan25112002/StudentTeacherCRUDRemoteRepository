@@ -11,7 +11,7 @@ public interface TeacherService {
 
     TeacherResponseDto createTeacher(TeacherRequestDto teacherRequestDto) throws IOException;
 
-    LinkedList<TeacherResponseDto> readTeachers();
+    List<TeacherResponseDto> readTeachers(Integer pageNumber, Integer pageSize, String sortBy, String sortDir, String searchBy, String search);
 
     TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id) throws IOException;
 
