@@ -4,7 +4,6 @@ import com.branch.StudentTeacherCRUD.dto.requestDto.TeacherRequestDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.TeacherResponseDto;
 
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 
 public interface TeacherService {

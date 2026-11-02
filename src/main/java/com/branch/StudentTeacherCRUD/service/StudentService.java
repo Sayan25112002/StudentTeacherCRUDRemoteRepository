@@ -2,7 +2,6 @@ package com.branch.StudentTeacherCRUD.service;
 
 import com.branch.StudentTeacherCRUD.dto.requestDto.StudentRequestDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.StudentResponseDto;
-import org.springframework.data.domain.Pageable;
 
 import java.io.IOException;
 import java.util.List;
