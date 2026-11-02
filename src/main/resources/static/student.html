@@ -300,7 +300,7 @@
             <table>
                 <thead>
                 <tr>
-                    <th><button type="button" class="sort-button" data-sort="id">Serial ID ↕</button></th>
+                    <th><button type="button" class="sort-button" data-sort="serialId">Serial ID ↕</button></th>
                     <th>Photo</th>
                     <th><button type="button" class="sort-button" data-sort="firstName">First Name ↕</button></th>
                     <th><button type="button" class="sort-button" data-sort="lastName">Last Name ↕</button></th>
@@ -345,11 +345,15 @@
     let students = [];
     let pageNumber = 1;
     let pageSize = 5;
-    let sortColumn = "id";
+    let sortColumn = "serialId";
     let sortDirection = "ASC";
     let searchBy = "";
     let search = "";
     let hasNextPage = false;
+
+    // Frontend Serial ID Management
+    const studentSerialMap = new Map();
+    let nextSerialId = 1;
 
     async function request(url, options = {}) {
         const response = await fetch(url, options);
@@ -400,11 +404,15 @@
     });
 
     async function loadStudents() {
+        // If sorting by serialId, query backend by database 'id' as baseline order
+        const backendSortBy = sortColumn === "serialId" ? "id" : sortColumn;
+        const backendSortDir = sortColumn === "serialId" ? "ASC" : sortDirection;
+
         const params = new URLSearchParams({
             pageNumber: String(pageNumber),
             pageSize: String(pageSize),
-            sortBy: sortColumn,
-            sortDir: sortDirection
+            sortBy: backendSortBy,
+            sortDir: backendSortDir
         });
 
         if (search && searchBy) {
@@ -419,7 +427,24 @@
                 throw new Error("Expected a list of students from the API.");
             }
 
-            students = data;
+            // Assign or retrieve persistent frontend serial ID for each student
+            students = data.map(student => {
+                if (!studentSerialMap.has(student.id)) {
+                    studentSerialMap.set(student.id, nextSerialId++);
+                }
+                return {
+                    ...student,
+                    serialId: studentSerialMap.get(student.id)
+                };
+            });
+
+            // If sorting by serialId, sort the current students array locally on frontend
+            if (sortColumn === "serialId") {
+                students.sort((a, b) => {
+                    return sortDirection === "ASC" ? a.serialId - b.serialId : b.serialId - a.serialId;
+                });
+            }
+
             hasNextPage = data.length === pageSize;
 
             renderStudents();
@@ -514,7 +539,8 @@
             const row = document.createElement("tr");
 
             const idCell = document.createElement("td");
-            idCell.textContent = student.id ?? "";
+            // Display the persistent frontend-generated serialId
+            idCell.textContent = student.serialId ?? "";
             row.appendChild(idCell);
 
             const photoCell = document.createElement("td");
