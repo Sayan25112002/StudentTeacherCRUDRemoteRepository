@@ -1,0 +1,58 @@
+package com.branch.StudentTeacherCRUD.exception;
+
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException ex) {
+        ApiError apiError = new ApiError(ex.getMessage(), HttpStatus.METHOD_NOT_ALLOWED);
+        return new ResponseEntity<>(apiError, apiError.getStatus());
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiError> handleEntityNotFoundException(EntityNotFoundException ex) {
+        ApiError apiError = new ApiError(ex.getMessage(), HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(apiError, apiError.getStatus());
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResourceFoundException(NoResourceFoundException ex) {
+        ApiError apiError = new ApiError(ex.getMessage(), HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(apiError, apiError.getStatus());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleException(Exception ex) {
+        ApiError apiError = new ApiError(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(apiError, apiError.getStatus());
+    }
+
+    @ExceptionHandler(PasswordInvalidException.class)
+    public ResponseEntity<ApiError> handleInvalidPasswordException(PasswordInvalidException ex) {
+        String message = "Password Invalid. Password must be atleast 8 characters long with atleast one uppercase, lowercase, digit and special characters";
+        ApiError apiError = new ApiError(message, HttpStatus.CONFLICT);
+        return new ResponseEntity<>(apiError, apiError.getStatus());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        String message = "Duplicate value already exists";
+        if (ex.getMessage().contains("student_email_key")) {
+            message = "Duplicate Email. Email Already Exists";
+        } else if (ex.getMessage().contains("student_contact_no_key")) {
+            message = "Duplicate Contact Number. Contact Number Already Exists";
+        }
+        ApiError apiError = new ApiError(message, HttpStatus.CONFLICT);
+        return new ResponseEntity<>(apiError, apiError.getStatus());
+    }
+
+}
