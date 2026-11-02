@@ -244,18 +244,13 @@
 
     let editingId = null;
     let editingPhotoPath = null;
-    let teachers = [];
+    let allTeachers = [];
     let pageNumber = 1;
     let pageSize = 5;
     let sortColumn = "serialId";
     let sortDirection = "ASC";
     let searchBy = "";
     let search = "";
-    let hasNextPage = false;
-
-    // Frontend Serial ID Management
-    const teacherSerialMap = new Map();
-    let nextSerialId = 1;
 
     async function request(url, options = {}) {
         const response = await fetch(url, options);
@@ -297,19 +292,14 @@
 
     async function loadTeachers() {
         if (loadingTeachers) return;
-
         loadingTeachers = true;
 
         try {
-            // If sorting by serialId, query backend by database 'id' as baseline order
-            const backendSortBy = sortColumn === "serialId" ? "id" : sortColumn;
-            const backendSortDir = sortColumn === "serialId" ? "ASC" : sortDirection;
-
             const params = new URLSearchParams({
-                pageNumber: pageNumber,
-                pageSize: pageSize,
-                sortBy: backendSortBy,
-                sortDir: backendSortDir
+                pageNumber: "1",
+                pageSize: "10000",
+                sortBy: "id",
+                sortDir: "ASC"
             });
 
             if (searchBy) params.append("searchBy", searchBy);
@@ -321,42 +311,43 @@
                 throw new Error("Expected a list of teachers from the API.");
             }
 
-            // Assign or retrieve persistent frontend serial ID for each teacher
-            teachers = data.map(teacher => {
-                if (!teacherSerialMap.has(teacher.id)) {
-                    teacherSerialMap.set(teacher.id, nextSerialId++);
-                }
-                return {
-                    ...teacher,
-                    serialId: teacherSerialMap.get(teacher.id)
-                };
-            });
+            // Sort fetched data by database ID ASC to establish permanent global Serial IDs (1, 2, 3...)
+            data.sort((a, b) => a.id - b.id);
+            allTeachers = data.map((teacher, index) => ({
+                ...teacher,
+                serialId: index + 1
+            }));
 
-            // If sorting by serialId, sort the current teachers array locally on frontend
-            if (sortColumn === "serialId") {
-                teachers.sort((a, b) => {
-                    return sortDirection === "ASC" ? a.serialId - b.serialId : b.serialId - a.serialId;
-                });
-            }
-
-            hasNextPage = data.length === pageSize;
+            // Apply current sorting
+            sortTeachersArray();
 
             renderTeachers();
-
-            document.getElementById("pageInfo").textContent =
-                `Page ${pageNumber}`;
-
-            document.getElementById("previousButton").disabled =
-                pageNumber === 1;
-
-            document.getElementById("nextButton").disabled =
-                !hasNextPage;
+            updatePagination();
 
         } catch (error) {
             showMessage("Could not load teachers: " + error.message);
         } finally {
             loadingTeachers = false;
         }
+    }
+
+    function sortTeachersArray() {
+        allTeachers.sort((a, b) => {
+            let valA = a[sortColumn];
+            let valB = b[sortColumn];
+
+            if (valA === undefined || valA === null) valA = "";
+            if (valB === undefined || valB === null) valB = "";
+
+            if (typeof valA === "string") {
+                valA = valA.toLowerCase();
+                valB = valB.toLowerCase();
+            }
+
+            if (valA < valB) return sortDirection === "ASC" ? -1 : 1;
+            if (valA > valB) return sortDirection === "ASC" ? 1 : -1;
+            return 0;
+        });
     }
 
     function updateSortArrows() {
@@ -382,7 +373,10 @@
     function renderTeachers() {
         table.replaceChildren();
 
-        if (teachers.length === 0) {
+        const startIndex = (pageNumber - 1) * pageSize;
+        const pageTeachers = allTeachers.slice(startIndex, startIndex + pageSize);
+
+        if (pageTeachers.length === 0) {
             const row = document.createElement("tr");
             const cell = document.createElement("td");
 
@@ -396,12 +390,12 @@
             return;
         }
 
-        teachers.forEach(teacher => {
+        pageTeachers.forEach(teacher => {
             const row = document.createElement("tr");
 
-            // Display persistent frontend-generated Serial ID
+            // Serial ID
             const serialCell = document.createElement("td");
-            serialCell.textContent = teacher.serialId ?? "";
+            serialCell.textContent = teacher.serialId;
             row.appendChild(serialCell);
 
             // Teacher photo
@@ -470,6 +464,15 @@
         updateSortArrows();
     }
 
+    function updatePagination() {
+        const startIndex = (pageNumber - 1) * pageSize;
+        const hasNextPage = startIndex + pageSize < allTeachers.length;
+
+        document.getElementById("pageInfo").textContent = `Page ${pageNumber}`;
+        document.getElementById("previousButton").disabled = pageNumber <= 1;
+        document.getElementById("nextButton").disabled = !hasNextPage;
+    }
+
     async function getExistingPhotoFile(photoPath) {
         const fileName = photoPath.split(/[\\/]/).pop();
         const response = await fetch(`http://localhost:8080/images/${encodeURIComponent(fileName)}`);
@@ -486,7 +489,6 @@
         const formData = new FormData();
 
         Object.entries(teacher).forEach(([key, value]) => {
-            // Password is required on create and omitted from update requests.
             if (key === "password" && isEditing) return;
             formData.append(key, value);
         });
@@ -511,7 +513,7 @@
     });
 
     function editTeacher(id) {
-        const teacher = teachers.find(item => String(item.id) === String(id));
+        const teacher = allTeachers.find(item => String(item.id) === String(id));
         if (!teacher) { showMessage("Teacher record not found."); return; }
         editingId = id;
         editingPhotoPath = teacher.photoPath ?? null;
@@ -568,30 +570,22 @@
 
     document.getElementById("cancelButton").addEventListener("click", resetForm);
     document.getElementById("refreshButton").addEventListener("click", loadTeachers);
-    let sortingInProgress = false;
 
     document.querySelectorAll(".sort-button").forEach(button => {
-        button.addEventListener("click", async () => {
-            if (sortingInProgress) return;
+        button.addEventListener("click", () => {
+            const column = button.dataset.sort;
 
-            sortingInProgress = true;
-
-            try {
-                const column = button.dataset.sort;
-
-                if (sortColumn === column) {
-                    sortDirection = sortDirection === "ASC" ? "DESC" : "ASC";
-                } else {
-                    sortColumn = column;
-                    sortDirection = "ASC";
-                }
-
-                pageNumber = 1;
-
-                await loadTeachers();
-            } finally {
-                sortingInProgress = false;
+            if (sortColumn === column) {
+                sortDirection = sortDirection === "ASC" ? "DESC" : "ASC";
+            } else {
+                sortColumn = column;
+                sortDirection = "ASC";
             }
+
+            pageNumber = 1;
+            sortTeachersArray();
+            renderTeachers();
+            updatePagination();
         });
     });
 
@@ -623,25 +617,30 @@
         await loadTeachers();
     });
 
-    document.getElementById("pageSize").addEventListener("change", async event => {
+    document.getElementById("pageSize").addEventListener("change", event => {
         pageSize = Number(event.target.value);
         pageNumber = 1;
-        await loadTeachers();
+        renderTeachers();
+        updatePagination();
     });
 
-    document.getElementById("previousButton").addEventListener("click", async () => {
+    document.getElementById("previousButton").addEventListener("click", () => {
         if (pageNumber > 1) {
             pageNumber--;
-            await loadTeachers();
+            renderTeachers();
+            updatePagination();
         }
     });
 
-    document.getElementById("nextButton").addEventListener("click", async () => {
-        if (hasNextPage) {
+    document.getElementById("nextButton").addEventListener("click", () => {
+        const startIndex = (pageNumber - 1) * pageSize;
+        if (startIndex + pageSize < allTeachers.length) {
             pageNumber++;
-            await loadTeachers();
+            renderTeachers();
+            updatePagination();
         }
     });
+
     loadTeachers();
 </script>
 </body>

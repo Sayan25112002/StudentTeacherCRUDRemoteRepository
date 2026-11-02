@@ -342,18 +342,13 @@
 
     let editingId = null;
     let editingPhotoPath = null;
-    let students = [];
+    let allStudents = [];
     let pageNumber = 1;
     let pageSize = 5;
     let sortColumn = "serialId";
     let sortDirection = "ASC";
     let searchBy = "";
     let search = "";
-    let hasNextPage = false;
-
-    // Frontend Serial ID Management
-    const studentSerialMap = new Map();
-    let nextSerialId = 1;
 
     async function request(url, options = {}) {
         const response = await fetch(url, options);
@@ -403,60 +398,74 @@
         }
     });
 
+    let loadingStudents = false;
+
     async function loadStudents() {
-        // If sorting by serialId, query backend by database 'id' as baseline order
-        const backendSortBy = sortColumn === "serialId" ? "id" : sortColumn;
-        const backendSortDir = sortColumn === "serialId" ? "ASC" : sortDirection;
-
-        const params = new URLSearchParams({
-            pageNumber: String(pageNumber),
-            pageSize: String(pageSize),
-            sortBy: backendSortBy,
-            sortDir: backendSortDir
-        });
-
-        if (search && searchBy) {
-            params.set("searchBy", searchBy);
-            params.set("search", search);
-        }
+        if (loadingStudents) return;
+        loadingStudents = true;
 
         try {
+            const params = new URLSearchParams({
+                pageNumber: "1",
+                pageSize: "10000",
+                sortBy: "id",
+                sortDir: "ASC"
+            });
+
+            if (search && searchBy) {
+                params.set("searchBy", searchBy);
+                params.set("search", search);
+            }
+
             const data = await request(`${API.read}?${params.toString()}`);
 
             if (!Array.isArray(data)) {
                 throw new Error("Expected a list of students from the API.");
             }
 
-            // Assign or retrieve persistent frontend serial ID for each student
-            students = data.map(student => {
-                if (!studentSerialMap.has(student.id)) {
-                    studentSerialMap.set(student.id, nextSerialId++);
-                }
-                return {
-                    ...student,
-                    serialId: studentSerialMap.get(student.id)
-                };
-            });
+            // Establish permanent global Serial IDs (1, 2, 3...) based on database ID order
+            data.sort((a, b) => a.id - b.id);
+            allStudents = data.map((student, index) => ({
+                ...student,
+                serialId: index + 1
+            }));
 
-            // If sorting by serialId, sort the current students array locally on frontend
-            if (sortColumn === "serialId") {
-                students.sort((a, b) => {
-                    return sortDirection === "ASC" ? a.serialId - b.serialId : b.serialId - a.serialId;
-                });
-            }
-
-            hasNextPage = data.length === pageSize;
+            // Apply current sorting criteria
+            sortStudentsArray();
 
             renderStudents();
             updatePagination();
         } catch (error) {
             showMessage("Could not load students: " + error.message);
+        } finally {
+            loadingStudents = false;
         }
     }
 
-    function updatePagination() {
-        document.getElementById("pageInfo").textContent = `Page ${pageNumber}`;
+    function sortStudentsArray() {
+        allStudents.sort((a, b) => {
+            let valA = a[sortColumn];
+            let valB = b[sortColumn];
 
+            if (valA === undefined || valA === null) valA = "";
+            if (valB === undefined || valB === null) valB = "";
+
+            if (typeof valA === "string") {
+                valA = valA.toLowerCase();
+                valB = valB.toLowerCase();
+            }
+
+            if (valA < valB) return sortDirection === "ASC" ? -1 : 1;
+            if (valA > valB) return sortDirection === "ASC" ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function updatePagination() {
+        const startIndex = (pageNumber - 1) * pageSize;
+        const hasNextPage = startIndex + pageSize < allStudents.length;
+
+        document.getElementById("pageInfo").textContent = `Page ${pageNumber}`;
         document.getElementById("previousButton").disabled = pageNumber <= 1;
         document.getElementById("nextButton").disabled = !hasNextPage;
     }
@@ -496,33 +505,39 @@
         });
 
     document.getElementById("pageSize")
-        .addEventListener("change", async event => {
+        .addEventListener("change", event => {
             pageSize = Number(event.target.value);
             pageNumber = 1;
-
-            await loadStudents();
+            renderStudents();
+            updatePagination();
         });
 
     document.getElementById("previousButton")
-        .addEventListener("click", async () => {
+        .addEventListener("click", () => {
             if (pageNumber > 1) {
                 pageNumber--;
-                await loadStudents();
+                renderStudents();
+                updatePagination();
             }
         });
 
     document.getElementById("nextButton")
-        .addEventListener("click", async () => {
-            if (hasNextPage) {
+        .addEventListener("click", () => {
+            const startIndex = (pageNumber - 1) * pageSize;
+            if (startIndex + pageSize < allStudents.length) {
                 pageNumber++;
-                await loadStudents();
+                renderStudents();
+                updatePagination();
             }
         });
 
     function renderStudents() {
         table.replaceChildren();
 
-        if (students.length === 0) {
+        const startIndex = (pageNumber - 1) * pageSize;
+        const pageStudents = allStudents.slice(startIndex, startIndex + pageSize);
+
+        if (pageStudents.length === 0) {
             const row = document.createElement("tr");
             const cell = document.createElement("td");
 
@@ -535,12 +550,11 @@
             return;
         }
 
-        students.forEach(student => {
+        pageStudents.forEach(student => {
             const row = document.createElement("tr");
 
             const idCell = document.createElement("td");
-            // Display the persistent frontend-generated serialId
-            idCell.textContent = student.serialId ?? "";
+            idCell.textContent = student.serialId;
             row.appendChild(idCell);
 
             const photoCell = document.createElement("td");
@@ -655,7 +669,7 @@
     });
 
     function editStudent(id) {
-        const student = students.find(item => item.id === id);
+        const student = allStudents.find(item => item.id === id);
 
         if (!student) {
             showMessage("Student record not found.");
@@ -743,36 +757,23 @@
         .addEventListener("click", loadStudents);
 
 
-    let sortingInProgress = false;
-
     document.querySelectorAll(".sort-button").forEach(button => {
-        button.addEventListener("click", async () => {
-            if (sortingInProgress) {
-                return;
+        button.addEventListener("click", () => {
+            const column = button.dataset.sort;
+
+            if (sortColumn === column) {
+                sortDirection = sortDirection === "ASC" ? "DESC" : "ASC";
+            } else {
+                sortColumn = column;
+                sortDirection = "ASC";
             }
 
-            sortingInProgress = true;
-            button.disabled = true;
-
-            try {
-                const column = button.dataset.sort;
-
-                if (sortColumn === column) {
-                    sortDirection = sortDirection === "ASC" ? "DESC" : "ASC";
-                } else {
-                    sortColumn = column;
-                    sortDirection = "ASC";
-                }
-
-                pageNumber = 1;
-                await loadStudents();
-            } finally {
-                sortingInProgress = false;
-                button.disabled = false;
-            }
+            pageNumber = 1;
+            sortStudentsArray();
+            renderStudents();
+            updatePagination();
         });
     });
-
 
     loadStudents();
 </script>
