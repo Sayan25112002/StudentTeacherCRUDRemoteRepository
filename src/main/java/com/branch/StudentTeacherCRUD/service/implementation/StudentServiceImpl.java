@@ -47,18 +47,15 @@ public class StudentServiceImpl implements StudentService {
         Pageable pageable = PageRequest.of(pageNumber-1, pageSize, sort);
         if(search == null){
             students = studentRepository.findAll(pageable).getContent();
-        }else if(searchBy.equalsIgnoreCase("firstName")){
-            students = studentRepository.findByFirstName(search,pageable).getContent();
-        }else if(searchBy.equalsIgnoreCase("lastName")) {
-            students = studentRepository.findByLastName(search, pageable).getContent();
-        }else if(searchBy.equalsIgnoreCase("email")) {
-            students = studentRepository.findByEmail(search, pageable).getContent();
-        }else if(searchBy.equalsIgnoreCase("contactNo")) {
-            students = studentRepository.findByContactNo(search, pageable).getContent();
-        }else if(searchBy.equalsIgnoreCase("address")) {
-            students = studentRepository.findByAddress(search, pageable).getContent();
         }else {
-            throw new IllegalArgumentException("Invalid Search Arguments");
+            students = switch(searchBy){
+                case "firstName" -> studentRepository.findByFirstName(search,pageable).getContent();
+                case "lastName" -> studentRepository.findByLastName(search,pageable).getContent();
+                case "email" -> studentRepository.findByEmail(search,pageable).getContent();
+                case "contactNo" -> studentRepository.findByContactNo(search,pageable).getContent();
+                case "address" -> studentRepository.findByAddress(search,pageable).getContent();
+                default -> throw new IllegalStateException("Unexpected value: " + searchBy);
+            };
         }
         return studentMapper.toStudentResponseDtoList(students);
     }
@@ -66,25 +63,12 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public StudentResponseDto updateStudent(StudentRequestDto studentRequestDto, Long id) throws IOException {
         Student student = studentRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Student not found"));
-        if(studentRequestDto.getPhoto()!=null){
+        if(studentRequestDto.getPhoto() != null){
             student.setPhotoPath(saveFile(studentRequestDto.getPhoto()));
         }
-        if(studentRequestDto.getFirstName() != null) {
-            student.setFirstName(studentRequestDto.getFirstName());
-        }
-        if(studentRequestDto.getLastName() != null) {
-            student.setLastName(studentRequestDto.getLastName());
-        }
-        if(studentRequestDto.getEmail() != null) {
-            student.setEmail(studentRequestDto.getEmail());
-        }
-        if(studentRequestDto.getContactNo() != null) {
-            student.setContactNo(studentRequestDto.getContactNo());
-        }
-        if(studentRequestDto.getAddress() != null) {
-            student.setAddress(studentRequestDto.getAddress());
-        }
-        return studentMapper.toStudentResponseDto(studentRepository.save(student));
+        studentMapper.updateStudent(studentRequestDto,student);
+        Student savedStudent = studentRepository.save(student);
+        return studentMapper.toStudentResponseDto(studentRepository.save(savedStudent));
     }
 
     @Override

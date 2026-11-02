@@ -48,18 +48,15 @@ public class TeacherServiceImpl implements TeacherService {
         Pageable pageable = PageRequest.of(pageNumber-1, pageSize, sort);
         if(search==null){
             teachers = teacherRepository.findAll(pageable).getContent();
-        }else if(searchBy.equalsIgnoreCase("name")) {
-            teachers = teacherRepository.findByName(search, pageable).getContent();
-        }else if (searchBy.equalsIgnoreCase("email")) {
-            teachers = teacherRepository.findByEmail(search, pageable).getContent();
-        }else if (searchBy.equalsIgnoreCase("contactNo")) {
-            teachers = teacherRepository.findByContactNo(search, pageable).getContent();
-        }else if (searchBy.equalsIgnoreCase("address")) {
-            teachers = teacherRepository.findByAddress(search, pageable).getContent();
-        }else if (searchBy.equalsIgnoreCase("designation")){
-            teachers = teacherRepository.findByDesignation(search, pageable).getContent();
         }else {
-            throw new IllegalArgumentException("Invalid Search Arguments");
+            teachers = switch (searchBy){
+                case "name" -> teacherRepository.findByName(search,pageable).getContent();
+                case "email" -> teacherRepository.findByEmail(search,pageable).getContent();
+                case "contactNo"  -> teacherRepository.findByContactNo(search,pageable).getContent();
+                case "address"  -> teacherRepository.findByAddress(search,pageable).getContent();
+                case "designation"  -> teacherRepository.findByDesignation(search,pageable).getContent();
+                default -> throw new IllegalStateException("Unexpected value: " + searchBy.toLowerCase());
+            };
         }
         return teacherMapper.toTeacherResponseDtoList(teachers);
     }
@@ -67,24 +64,10 @@ public class TeacherServiceImpl implements TeacherService {
     @Override
     public TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id) throws IOException {
         Teacher teacher = teacherRepository.findById(id).orElseThrow(()->new EntityNotFoundException("Teacher not found"));
-        if(teacherRequestDto.getPhoto() != null){
+        if(teacherRequestDto.getPhoto()!=null){
             teacher.setPhotoPath(saveFile(teacherRequestDto.getPhoto()));
         }
-        if(teacherRequestDto.getName()!=null){
-            teacher.setName(teacherRequestDto.getName());
-        }
-        if(teacherRequestDto.getEmail()!=null){
-            teacher.setEmail(teacherRequestDto.getEmail());
-        }
-        if(teacherRequestDto.getContactNo()!=null){
-            teacher.setContactNo(teacherRequestDto.getContactNo());
-        }
-        if(teacherRequestDto.getAddress()!=null){
-            teacher.setAddress(teacherRequestDto.getAddress());
-        }
-        if(teacherRequestDto.getDesignation()!=null){
-            teacher.setDesignation(teacherRequestDto.getDesignation());
-        }
+        teacherMapper.updateTeacher(teacherRequestDto,teacher);
         Teacher savedTeacher = teacherRepository.save(teacher);
         return teacherMapper.toTeacherResponseDto(savedTeacher);
     }
