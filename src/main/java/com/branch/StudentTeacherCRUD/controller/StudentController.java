@@ -5,7 +5,6 @@ import com.branch.StudentTeacherCRUD.dto.responseDto.StudentResponseDto;
 import com.branch.StudentTeacherCRUD.service.StudentService;
 import com.branch.StudentTeacherCRUD.validations.Create;
 import com.branch.StudentTeacherCRUD.validations.Update;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -25,8 +24,13 @@ public class StudentController {
     }
 
     @GetMapping("/readStudent")
-    public List<StudentResponseDto> readStudent(){
-        return studentService.readStudents();
+    public List<StudentResponseDto> readStudent(@RequestParam(required = false, defaultValue = "1") Integer pageNumber,
+                                                @RequestParam(required = false, defaultValue = "5") Integer pageSize,
+                                                @RequestParam(required = false, defaultValue = "id") String sortBy,
+                                                @RequestParam(required = false, defaultValue = "ASC") String sortDir,
+                                                @RequestParam(required = false) String searchBy,
+                                                @RequestParam(required = false) String search) {
+        return studentService.readStudents(pageNumber, pageSize, sortBy, sortDir, searchBy, search);
     }
 
     @PutMapping("/updateStudent")

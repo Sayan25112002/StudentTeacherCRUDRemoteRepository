@@ -10,6 +10,9 @@ import com.branch.StudentTeacherCRUD.repository.TeacherRepository;
 import com.branch.StudentTeacherCRUD.service.TeacherService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -33,36 +36,38 @@ public class TeacherServiceImpl implements TeacherService {
         return teacherMapper.toTeacherResponseDto(savedTeacher);
     }
 
-
     @Override
-    public LinkedList<TeacherResponseDto> readTeachers() {
-        List<Teacher> teachers = teacherRepository.findAll();
-        LinkedList<Teacher> teacherList = new LinkedList<>(teachers);
-        return teacherMapper.toTeacherResponseDtoList(teacherList);
+    public List<TeacherResponseDto> readTeachers(Integer pageNumber, Integer pageSize, String sortBy, String sortDir, String searchBy, String search) {
+        List<Teacher> teachers;
+        Sort sort;
+        if(sortDir.equalsIgnoreCase("ASC")) {
+            sort = Sort.by(sortBy).ascending();
+        }else {
+            sort = Sort.by(sortBy).descending();
+        }
+        Pageable pageable = PageRequest.of(pageNumber-1, pageSize, sort);
+        if(search==null){
+            teachers = teacherRepository.findAll(pageable).getContent();
+        }else {
+            teachers = switch (searchBy){
+                case "name" -> teacherRepository.findByName(search,pageable).getContent();
+                case "email" -> teacherRepository.findByEmail(search,pageable).getContent();
+                case "contactNo"  -> teacherRepository.findByContactNo(search,pageable).getContent();
+                case "address"  -> teacherRepository.findByAddress(search,pageable).getContent();
+                case "designation"  -> teacherRepository.findByDesignation(search,pageable).getContent();
+                default -> throw new IllegalStateException("Unexpected value: " + searchBy.toLowerCase());
+            };
+        }
+        return teacherMapper.toTeacherResponseDtoList(teachers);
     }
-
 
     @Override
     public TeacherResponseDto updateTeacher(TeacherRequestDto teacherRequestDto, Long id) throws IOException {
         Teacher teacher = teacherRepository.findById(id).orElseThrow(()->new EntityNotFoundException("Teacher not found"));
-        if(teacherRequestDto.getPhoto() != null){
+        if(teacherRequestDto.getPhoto()!=null){
             teacher.setPhotoPath(saveFile(teacherRequestDto.getPhoto()));
         }
-        if(teacherRequestDto.getName()!=null){
-            teacher.setName(teacherRequestDto.getName());
-        }
-        if(teacherRequestDto.getEmail()!=null){
-            teacher.setEmail(teacherRequestDto.getEmail());
-        }
-        if(teacherRequestDto.getContactNo()!=null){
-            teacher.setContactNo(teacherRequestDto.getContactNo());
-        }
-        if(teacherRequestDto.getAddress()!=null){
-            teacher.setAddress(teacherRequestDto.getAddress());
-        }
-        if(teacherRequestDto.getDesignation()!=null){
-            teacher.setDesignation(teacherRequestDto.getDesignation());
-        }
+        teacherMapper.updateTeacher(teacherRequestDto,teacher);
         Teacher savedTeacher = teacherRepository.save(teacher);
         return teacherMapper.toTeacherResponseDto(savedTeacher);
     }

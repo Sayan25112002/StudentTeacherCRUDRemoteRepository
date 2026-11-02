@@ -10,7 +10,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 
 @RestController
@@ -25,8 +24,13 @@ public class TeacherController {
     }
 
     @GetMapping("/readTeacher")
-    public LinkedList<TeacherResponseDto> readTeacher() {
-        return teacherService.readTeachers();
+    public List<TeacherResponseDto> readTeacher(@RequestParam(required = false, defaultValue = "1") Integer pageNumber,
+                                                      @RequestParam(required = false, defaultValue = "5") Integer pageSize,
+                                                      @RequestParam(required = false, defaultValue = "id") String sortBy,
+                                                      @RequestParam(required = false, defaultValue = "ASC") String sortDir,
+                                                      @RequestParam(required = false) String searchBy,
+                                                      @RequestParam(required = false) String search) {
+        return teacherService.readTeachers(pageNumber, pageSize, sortBy, sortDir, searchBy, search);
     }
 
     @PutMapping("/updateTeacher")

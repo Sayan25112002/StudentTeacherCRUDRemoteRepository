@@ -177,10 +177,36 @@
     <section class="card">
         <h2>Teacher Records</h2>
         <button type="button" class="primary" id="refreshButton">Refresh Records</button>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+            <select id="searchBy" style="width: auto; padding: 10px;">
+                <option value="">All Fields</option>
+                <option value="name">Name</option>
+                <option value="email">Email</option>
+                <option value="contactNo">Contact Number</option>
+                <option value="address">Address</option>
+                <option value="designation">Designation</option>
+            </select>
+
+            <input type="text" id="searchInput" placeholder="Search teachers..."
+                   style="width: auto; flex: 1; min-width: 180px;">
+
+            <select id="pageSize" style="width: auto; padding: 10px;">
+                <option value="5">5 per page</option>
+                <option value="10">10 per page</option>
+                <option value="20">20 per page</option>
+            </select>
+
+            <button type="button" class="primary" id="searchButton">Search</button>
+            <button type="button" class="secondary" id="clearSearchButton">Clear</button>
+        </div>
         <div class="table-wrapper">
             <table>
                 <thead><tr>
-                    <th><button type="button" class="sort-button" data-sort="serial">Serial ID ↕</button></th>
+                    <th>
+                        <button type="button" class="sort-button" data-sort="serialId">
+                            Serial ID ↕
+                        </button>
+                    </th>
                     <th>Photo</th>
                     <th><button type="button" class="sort-button" data-sort="name">Name ↕</button></th>
                     <th><button type="button" class="sort-button" data-sort="email">Email ↕</button></th>
@@ -191,6 +217,14 @@
                 </tr></thead>
                 <tbody id="teacherTable"></tbody>
             </table>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; margin-top: 15px;">
+            <span id="pageInfo">Page 1</span>
+            <div>
+                <button type="button" class="secondary" id="previousButton">Previous</button>
+                <button type="button" class="primary" id="nextButton">Next</button>
+            </div>
         </div>
     </section>
 </div>
@@ -207,11 +241,16 @@
     const form = document.getElementById("teacherForm");
     const table = document.getElementById("teacherTable");
     const message = document.getElementById("message");
+
     let editingId = null;
     let editingPhotoPath = null;
-    let teachers = [];
-    let sortColumn = "serial";
-    let sortDirection = "asc";
+    let allTeachers = [];
+    let pageNumber = 1;
+    let pageSize = 5;
+    let sortColumn = "serialId";
+    let sortDirection = "ASC";
+    let searchBy = "";
+    let search = "";
 
     async function request(url, options = {}) {
         const response = await fetch(url, options);
@@ -249,22 +288,77 @@
         }
     });
 
+    let loadingTeachers = false;
+
     async function loadTeachers() {
+        if (loadingTeachers) return;
+        loadingTeachers = true;
+
         try {
-            const data = await request(API.read);
-            if (!Array.isArray(data)) throw new Error("Expected a list of teachers from the API.");
-            teachers = data;
+            const params = new URLSearchParams({
+                pageNumber: "1",
+                pageSize: "10000",
+                sortBy: "id",
+                sortDir: "ASC"
+            });
+
+            if (searchBy) params.append("searchBy", searchBy);
+            if (search) params.append("search", search);
+
+            const data = await request(`${API.read}?${params.toString()}`);
+
+            if (!Array.isArray(data)) {
+                throw new Error("Expected a list of teachers from the API.");
+            }
+
+            // Sort fetched data by database ID ASC to establish permanent global Serial IDs (1, 2, 3...)
+            data.sort((a, b) => a.id - b.id);
+            allTeachers = data.map((teacher, index) => ({
+                ...teacher,
+                serialId: index + 1
+            }));
+
+            // Apply current sorting
+            sortTeachersArray();
+
             renderTeachers();
+            updatePagination();
+
         } catch (error) {
             showMessage("Could not load teachers: " + error.message);
+        } finally {
+            loadingTeachers = false;
         }
+    }
+
+    function sortTeachersArray() {
+        allTeachers.sort((a, b) => {
+            let valA = a[sortColumn];
+            let valB = b[sortColumn];
+
+            if (valA === undefined || valA === null) valA = "";
+            if (valB === undefined || valB === null) valB = "";
+
+            if (typeof valA === "string") {
+                valA = valA.toLowerCase();
+                valB = valB.toLowerCase();
+            }
+
+            if (valA < valB) return sortDirection === "ASC" ? -1 : 1;
+            if (valA > valB) return sortDirection === "ASC" ? 1 : -1;
+            return 0;
+        });
     }
 
     function updateSortArrows() {
         document.querySelectorAll(".sort-button").forEach(button => {
             const column = button.dataset.sort;
             const name = button.textContent.replace(/[↑↓↕]/g, "").trim();
-            button.textContent = name + (column === sortColumn ? (sortDirection === "asc" ? " ↑" : " ↓") : " ↕");
+
+            button.textContent = name +
+                (column === sortColumn
+                    ? (sortDirection === "ASC" ? " ↑" : " ↓")
+                    : " ↕");
         });
     }
 
@@ -278,77 +372,105 @@
 
     function renderTeachers() {
         table.replaceChildren();
-        const sorted = [...teachers].sort((a, b) => {
-            let result;
 
-            if (sortColumn === "serial") {
-                result = teachers.indexOf(a) - teachers.indexOf(b);
-            } else {
-                const aValue = a[sortColumn] ?? "";
-                const bValue = b[sortColumn] ?? "";
+        const startIndex = (pageNumber - 1) * pageSize;
+        const pageTeachers = allTeachers.slice(startIndex, startIndex + pageSize);
 
-                result = String(aValue).localeCompare(
-                    String(bValue),
-                    undefined,
-                    { numeric: true, sensitivity: "base" }
-                );
-            }
-
-            return sortDirection === "asc" ? result : -result;
-        });
-
-        if (sorted.length === 0) {
+        if (pageTeachers.length === 0) {
             const row = document.createElement("tr");
             const cell = document.createElement("td");
+
             cell.colSpan = 9;
             cell.textContent = "No teacher records found.";
+
             row.appendChild(cell);
             table.appendChild(row);
+
             updateSortArrows();
             return;
         }
 
-        sorted.forEach(teacher => {
+        pageTeachers.forEach(teacher => {
             const row = document.createElement("tr");
+
+            // Serial ID
             const serialCell = document.createElement("td");
-            serialCell.textContent = teachers.indexOf(teacher) + 1;
+            serialCell.textContent = teacher.serialId;
             row.appendChild(serialCell);
 
+            // Teacher photo
             const photoCell = document.createElement("td");
+
             if (teacher.photoPath) {
                 const fileName = teacher.photoPath.split(/[\\/]/).pop();
                 const img = document.createElement("img");
-                img.src = `http://localhost:8080/images/${encodeURIComponent(fileName)}`;
+
+                img.src =
+                    `http://localhost:8080/images/${encodeURIComponent(fileName)}`;
                 img.alt = "Teacher Photo";
-                img.width = 60; img.height = 60;
-                img.style.objectFit = "cover"; img.style.borderRadius = "6px";
+                img.width = 60;
+                img.height = 60;
+                img.style.objectFit = "cover";
+                img.style.borderRadius = "6px";
+
                 photoCell.appendChild(img);
-            } else photoCell.textContent = "No photo";
+            } else {
+                photoCell.textContent = "No photo";
+            }
+
             row.appendChild(photoCell);
 
-            [teacher.name, teacher.email, teacher.contactNo, teacher.address, teacher.designation, getStudentNames(teacher)].forEach(value => {
+            // Teacher details and assigned students
+            [
+                teacher.name,
+                teacher.email,
+                teacher.contactNo,
+                teacher.address,
+                teacher.designation,
+                getStudentNames(teacher)
+            ].forEach(value => {
                 const cell = document.createElement("td");
                 cell.textContent = value ?? "";
                 row.appendChild(cell);
             });
 
+            // Action buttons
             const actions = document.createElement("td");
+
             const editButton = document.createElement("button");
-            editButton.textContent = "Edit"; editButton.className = "edit";
+            editButton.textContent = "Edit";
+            editButton.className = "edit";
             editButton.addEventListener("click", () => editTeacher(teacher.id));
+
             const assignButton = document.createElement("button");
-            assignButton.textContent = "Assign Students"; assignButton.className = "assign";
+            assignButton.textContent = "Assign Students";
+            assignButton.className = "primary";
             assignButton.addEventListener("click", () => {
-                window.location.href = `assignStudents.html?teacherId=${encodeURIComponent(teacher.id)}`;
+                window.location.href =
+                    `assignStudents.html?teacherId=${encodeURIComponent(teacher.id)}`;
             });
+
             const deleteButton = document.createElement("button");
-            deleteButton.textContent = "Delete"; deleteButton.className = "delete";
+            deleteButton.textContent = "Delete";
+            deleteButton.className = "delete";
             deleteButton.addEventListener("click", () => deleteTeacher(teacher.id));
+
             actions.append(editButton, assignButton, deleteButton);
             row.appendChild(actions);
+
             table.appendChild(row);
         });
+
         updateSortArrows();
+    }
+
+    function updatePagination() {
+        const startIndex = (pageNumber - 1) * pageSize;
+        const hasNextPage = startIndex + pageSize < allTeachers.length;
+
+        document.getElementById("pageInfo").textContent = `Page ${pageNumber}`;
+        document.getElementById("previousButton").disabled = pageNumber <= 1;
+        document.getElementById("nextButton").disabled = !hasNextPage;
     }
 
     async function getExistingPhotoFile(photoPath) {
@@ -367,7 +489,6 @@
         const formData = new FormData();
 
         Object.entries(teacher).forEach(([key, value]) => {
-            // Password is required on create and omitted from update requests.
             if (key === "password" && isEditing) return;
             formData.append(key, value);
         });
@@ -392,7 +513,7 @@
     });
 
     function editTeacher(id) {
-        const teacher = teachers.find(item => String(item.id) === String(id));
+        const teacher = allTeachers.find(item => String(item.id) === String(id));
         if (!teacher) { showMessage("Teacher record not found."); return; }
         editingId = id;
         editingPhotoPath = teacher.photoPath ?? null;
@@ -449,14 +570,77 @@
 
     document.getElementById("cancelButton").addEventListener("click", resetForm);
     document.getElementById("refreshButton").addEventListener("click", loadTeachers);
+
     document.querySelectorAll(".sort-button").forEach(button => {
         button.addEventListener("click", () => {
             const column = button.dataset.sort;
-            if (sortColumn === column) sortDirection = sortDirection === "asc" ? "desc" : "asc";
-            else { sortColumn = column; sortDirection = "asc"; }
+
+            if (sortColumn === column) {
+                sortDirection = sortDirection === "ASC" ? "DESC" : "ASC";
+            } else {
+                sortColumn = column;
+                sortDirection = "ASC";
+            }
+
+            pageNumber = 1;
+            sortTeachersArray();
             renderTeachers();
+            updatePagination();
         });
     });
+
+    document.getElementById("searchButton").addEventListener("click", async () => {
+        searchBy = document.getElementById("searchBy").value;
+        search = document.getElementById("searchInput").value.trim();
+        pageNumber = 1;
+        await loadTeachers();
+    });
+
+    document.getElementById("searchInput").addEventListener("keydown", async event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            searchBy = document.getElementById("searchBy").value;
+            search = document.getElementById("searchInput").value.trim();
+            pageNumber = 1;
+            await loadTeachers();
+        }
+    });
+
+    document.getElementById("clearSearchButton").addEventListener("click", async () => {
+        document.getElementById("searchBy").value = "";
+        document.getElementById("searchInput").value = "";
+
+        searchBy = "";
+        search = "";
+        pageNumber = 1;
+
+        await loadTeachers();
+    });
+
+    document.getElementById("pageSize").addEventListener("change", event => {
+        pageSize = Number(event.target.value);
+        pageNumber = 1;
+        renderTeachers();
+        updatePagination();
+    });
+
+    document.getElementById("previousButton").addEventListener("click", () => {
+        if (pageNumber > 1) {
+            pageNumber--;
+            renderTeachers();
+            updatePagination();
+        }
+    });
+
+    document.getElementById("nextButton").addEventListener("click", () => {
+        const startIndex = (pageNumber - 1) * pageSize;
+        if (startIndex + pageSize < allTeachers.length) {
+            pageNumber++;
+            renderTeachers();
+            updatePagination();
+        }
+    });
+
     loadTeachers();
 </script>
 </body>

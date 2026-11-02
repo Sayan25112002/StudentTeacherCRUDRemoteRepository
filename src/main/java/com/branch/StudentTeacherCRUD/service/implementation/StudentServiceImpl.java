@@ -9,6 +9,9 @@ import com.branch.StudentTeacherCRUD.repository.StudentRepository;
 import com.branch.StudentTeacherCRUD.service.StudentService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -33,33 +36,39 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public List<StudentResponseDto> readStudents() {
-        List<Student> students = studentRepository.findAll();
+    public List<StudentResponseDto> readStudents(Integer pageNumber, Integer pageSize, String sortBy, String sortDir, String searchBy, String search) {
+        List<Student> students;
+        Sort sort;
+        if(sortDir.equalsIgnoreCase("ASC")){
+            sort = Sort.by(sortBy).ascending();
+        }else {
+            sort = Sort.by(sortBy).descending();
+        }
+        Pageable pageable = PageRequest.of(pageNumber-1, pageSize, sort);
+        if(search == null){
+            students = studentRepository.findAll(pageable).getContent();
+        }else {
+            students = switch(searchBy){
+                case "firstName" -> studentRepository.findByFirstName(search,pageable).getContent();
+                case "lastName" -> studentRepository.findByLastName(search,pageable).getContent();
+                case "email" -> studentRepository.findByEmail(search,pageable).getContent();
+                case "contactNo" -> studentRepository.findByContactNo(search,pageable).getContent();
+                case "address" -> studentRepository.findByAddress(search,pageable).getContent();
+                default -> throw new IllegalStateException("Unexpected value: " + searchBy);
+            };
+        }
         return studentMapper.toStudentResponseDtoList(students);
     }
 
     @Override
     public StudentResponseDto updateStudent(StudentRequestDto studentRequestDto, Long id) throws IOException {
         Student student = studentRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Student not found"));
-        if(studentRequestDto.getPhoto()!=null){
+        if(studentRequestDto.getPhoto() != null){
             student.setPhotoPath(saveFile(studentRequestDto.getPhoto()));
         }
-        if(studentRequestDto.getFirstName() != null) {
-            student.setFirstName(studentRequestDto.getFirstName());
-        }
-        if(studentRequestDto.getLastName() != null) {
-            student.setLastName(studentRequestDto.getLastName());
-        }
-        if(studentRequestDto.getEmail() != null) {
-            student.setEmail(studentRequestDto.getEmail());
-        }
-        if(studentRequestDto.getContactNo() != null) {
-            student.setContactNo(studentRequestDto.getContactNo());
-        }
-        if(studentRequestDto.getAddress() != null) {
-            student.setAddress(studentRequestDto.getAddress());
-        }
-        return studentMapper.toStudentResponseDto(studentRepository.save(student));
+        studentMapper.updateStudent(studentRequestDto,student);
+        Student savedStudent = studentRepository.save(student);
+        return studentMapper.toStudentResponseDto(studentRepository.save(savedStudent));
     }
 
     @Override
