@@ -4,6 +4,9 @@ import com.branch.StudentTeacherCRUD.dto.requestDto.StudentRequestDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.StudentResponseDto;
 import com.branch.StudentTeacherCRUD.entity.Student;
 import com.branch.StudentTeacherCRUD.entity.Teacher;
+import com.branch.StudentTeacherCRUD.exception.ContactNumberAlreadyExistsException;
+import com.branch.StudentTeacherCRUD.exception.EmailAlreadyExistsException;
+import com.branch.StudentTeacherCRUD.exception.PasswordInvalidException;
 import com.branch.StudentTeacherCRUD.mapper.StudentMapper;
 import com.branch.StudentTeacherCRUD.repository.StudentRepository;
 import com.branch.StudentTeacherCRUD.service.StudentService;
@@ -31,6 +34,28 @@ public class StudentServiceImpl implements StudentService {
     public StudentResponseDto createStudent(StudentRequestDto studentRequestDto) throws IOException {
         Student student = studentMapper.toStudent(studentRequestDto);
         student.setPhotoPath(saveFile(studentRequestDto.getPhoto()));
+        String password = studentRequestDto.getPassword();
+        if(password.length()<8){
+            throw new PasswordInvalidException("Password must be at least 8 characters");
+        }
+        if(!password.matches(".*[A-Z].*")){
+            throw new PasswordInvalidException("Password must have at least one Upper Case Letter");
+        }
+        if(!password.matches(".*[a-z].*")){
+            throw new PasswordInvalidException("Password must have at least one Lower Case Letter");
+        }
+        if(!password.matches(".*\\d*.")){
+            throw new PasswordInvalidException("Password must have at least one Digit Number");
+        }
+        if(!password.matches(".*[^A-Za-z0-9].*")){
+            throw new PasswordInvalidException("Password must have at least one Special Character");
+        }
+        if(studentRepository.existsByEmail(studentRequestDto.getEmail())){
+            throw new EmailAlreadyExistsException("Duplicate Email. Email Already Exists!");
+        }
+        if(studentRepository.existsByContactNo(studentRequestDto.getContactNo())){
+            throw new ContactNumberAlreadyExistsException("Duplicate Contact Number. Contact Number Already Exists!");
+        }
         Student savedStudent = studentRepository.save(student);
         return studentMapper.toStudentResponseDto(savedStudent);
     }
@@ -67,6 +92,12 @@ public class StudentServiceImpl implements StudentService {
             student.setPhotoPath(saveFile(studentRequestDto.getPhoto()));
         }
         studentMapper.updateStudent(studentRequestDto,student);
+        if(studentRepository.existsByEmail(studentRequestDto.getEmail())){
+            throw new EmailAlreadyExistsException("Duplicate Email. Email Already Exists!");
+        }
+        if(studentRepository.existsByContactNo(studentRequestDto.getContactNo())){
+            throw new ContactNumberAlreadyExistsException("Duplicate Contact Number. Contact Number Already Exists!");
+        }
         Student savedStudent = studentRepository.save(student);
         return studentMapper.toStudentResponseDto(studentRepository.save(savedStudent));
     }

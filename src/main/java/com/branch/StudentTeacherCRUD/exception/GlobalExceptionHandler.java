@@ -43,15 +43,15 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(apiError, apiError.getStatus());
     }
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiError> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
-        String message = "Duplicate value already exists";
-        if (ex.getMessage().contains("student_email_key")) {
-            message = "Duplicate Email. Email Already Exists";
-        } else if (ex.getMessage().contains("student_contact_no_key")) {
-            message = "Duplicate Contact Number. Contact Number Already Exists";
-        }
-        ApiError apiError = new ApiError(message, HttpStatus.CONFLICT);
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleEmailAlreadyExistsException(EmailAlreadyExistsException ex) {
+        ApiError apiError = new ApiError(ex.getMessage(), HttpStatus.CONFLICT);
+        return new ResponseEntity<>(apiError, apiError.getStatus());
+    }
+
+    @ExceptionHandler(ContactNumberAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleContactNumberAlreadyExistsException(ContactNumberAlreadyExistsException ex) {
+        ApiError apiError = new ApiError(ex.getMessage(), HttpStatus.CONFLICT);
         return new ResponseEntity<>(apiError, apiError.getStatus());
     }
 

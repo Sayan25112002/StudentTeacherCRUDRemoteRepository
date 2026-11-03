@@ -19,4 +19,7 @@ public interface StudentRepository extends JpaRepository<Student,Long> {
 
     Page<Student> findByAddress(String address, Pageable pageable);
 
+    boolean existsByEmail(String email);
+
+    boolean existsByContactNo(String contactNo);
 }

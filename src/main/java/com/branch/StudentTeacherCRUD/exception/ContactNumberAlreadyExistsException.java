@@ -1,6 +1,8 @@
 package com.branch.StudentTeacherCRUD.exception;
 
-public class ContactNumberAlreadyExistsException extends Exception{
+import org.springframework.dao.DataIntegrityViolationException;
+
+public class ContactNumberAlreadyExistsException extends DataIntegrityViolationException {
     public ContactNumberAlreadyExistsException(String message) {
         super(message);
     }

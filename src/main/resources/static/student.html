@@ -350,24 +350,29 @@
     let searchBy = "";
     let search = "";
 
+
     async function request(url, options = {}) {
         const response = await fetch(url, options);
-
         if (!response.ok) {
             const details = await response.text();
-            throw new Error(details || `Request failed: ${response.status}`);
+            let errorMessage = details;
+            try {
+                const errorData = JSON.parse(details);
+                errorMessage = errorData.message || details;
+            } catch (error) {
+                // Keep the original response text if it isn't JSON.
+            }
+            throw new Error(errorMessage || `Request failed: ${response.status}`);
         }
-
         if (response.status === 204) {
             return null;
         }
-
         const contentType = response.headers.get("content-type") || "";
-
         return contentType.includes("application/json")
             ? response.json()
             : null;
     }
+
 
     function showMessage(text) {
         message.textContent = text;
@@ -630,6 +635,36 @@
         const photo = document.getElementById("photo").files[0];
         const isEditing = editingId !== null;
 
+        // Validate password strength only when creating a student.
+        if (!isEditing) {
+            const password = student.password;
+
+            if (password.length < 8) {
+                alert("Password must contain at least 8 characters!");
+                return;
+            }
+
+            if (!/[A-Z]/.test(password)) {
+                alert("Password must contain at least one uppercase letter!");
+                return;
+            }
+
+            if (!/[a-z]/.test(password)) {
+                alert("Password must contain at least one lowercase letter!");
+                return;
+            }
+
+            if (!/[0-9]/.test(password)) {
+                alert("Password must contain at least one digit!");
+                return;
+            }
+
+            if (!/[^a-zA-Z0-9]/.test(password)) {
+                alert("Password must contain at least one special character!");
+                return;
+            }
+        }
+
         const formData = new FormData();
 
         Object.entries(student).forEach(([key, value]) => {
@@ -664,6 +699,7 @@
                 ? "Student updated successfully."
                 : "Student created successfully.");
         } catch (error) {
+            alert(error.message);
             showMessage("Operation failed: " + error.message);
         }
     });

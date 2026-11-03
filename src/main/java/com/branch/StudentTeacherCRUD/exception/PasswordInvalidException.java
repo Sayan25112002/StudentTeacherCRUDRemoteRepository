@@ -1,6 +1,8 @@
 package com.branch.StudentTeacherCRUD.exception;
 
-public class PasswordInvalidException extends Exception {
+import org.springframework.dao.DataIntegrityViolationException;
+
+public class PasswordInvalidException extends DataIntegrityViolationException{
     public PasswordInvalidException(String message) {
         super(message);
     }

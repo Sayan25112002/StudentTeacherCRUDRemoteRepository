@@ -1,6 +1,8 @@
 package com.branch.StudentTeacherCRUD.exception;
 
-public class EmailAlreadyExistsException extends Exception {
+import org.springframework.dao.DataIntegrityViolationException;
+
+public class EmailAlreadyExistsException extends DataIntegrityViolationException {
     public EmailAlreadyExistsException(String message) {
         super(message);
     }
