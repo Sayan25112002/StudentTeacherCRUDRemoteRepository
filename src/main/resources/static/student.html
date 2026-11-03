@@ -258,6 +258,7 @@
         <p id="message" role="status" aria-live="polite"></p>
     </section>
 
+
     <section class="card">
         <h2>Student Records</h2>
 
@@ -265,66 +266,97 @@
             Refresh Records
         </button>
 
-        <div class="table-controls">
-            <div>
-                <label for="searchBy">Filter by</label>
-                <select id="searchBy">
-                    <option value="firstName">First Name</option>
-                    <option value="lastName">Last Name</option>
-                    <option value="email">Email</option>
-                    <option value="contactNo">Contact Number</option>
-                    <option value="address">Address</option>
-                </select>
-            </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
 
-            <div>
-                <label for="searchInput">Search</label>
-                <input type="text" id="searchInput" placeholder="Enter search value">
-            </div>
+            <select id="searchBy" style="width: auto; padding: 10px;">
+                <option value="">All Fields</option>
+                <option value="firstName">First Name</option>
+                <option value="lastName">Last Name</option>
+                <option value="email">Email</option>
+                <option value="contactNo">Contact Number</option>
+                <option value="address">Address</option>
+            </select>
 
-            <button type="button" class="primary" id="searchButton">Search</button>
-            <button type="button" class="secondary" id="clearSearchButton">Clear</button>
+            <input type="text" id="searchInput"
+                   placeholder="Search students..."
+                   style="width: auto; flex: 1; min-width: 180px;">
 
-            <div>
-                <label for="pageSize">Records per page</label>
-                <select id="pageSize">
-                    <option value="5" selected>5</option>
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                </select>
-            </div>
+            <select id="pageSize" style="width: auto; padding: 10px;">
+                <option value="5" selected>5 per page</option>
+                <option value="10">10 per page</option>
+                <option value="20">20 per page</option>
+                <option value="50">50 per page</option>
+            </select>
+
+            <button type="button" class="primary" id="searchButton">
+                Search
+            </button>
+
+            <button type="button" class="secondary" id="clearSearchButton">
+                Clear
+            </button>
         </div>
 
         <div class="table-wrapper">
             <table>
                 <thead>
                 <tr>
-                    <th><button type="button" class="sort-button" data-sort="serialId">Serial ID ↕</button></th>
+                    <th>
+                        <button type="button" class="sort-button" data-sort="serialId">
+                            Serial ID ↕
+                        </button>
+                    </th>
                     <th>Photo</th>
-                    <th><button type="button" class="sort-button" data-sort="firstName">First Name ↕</button></th>
-                    <th><button type="button" class="sort-button" data-sort="lastName">Last Name ↕</button></th>
-                    <th><button type="button" class="sort-button" data-sort="email">Email ↕</button></th>
-                    <th><button type="button" class="sort-button" data-sort="contactNo">Contact Number ↕</button></th>
-                    <th><button type="button" class="sort-button" data-sort="address">Address ↕</button></th>
+                    <th>
+                        <button type="button" class="sort-button" data-sort="firstName">
+                            First Name ↕
+                        </button>
+                    </th>
+                    <th>
+                        <button type="button" class="sort-button" data-sort="lastName">
+                            Last Name ↕
+                        </button>
+                    </th>
+                    <th>
+                        <button type="button" class="sort-button" data-sort="email">
+                            Email ↕
+                        </button>
+                    </th>
+                    <th>
+                        <button type="button" class="sort-button" data-sort="contactNo">
+                            Contact Number ↕
+                        </button>
+                    </th>
+                    <th>
+                        <button type="button" class="sort-button" data-sort="address">
+                            Address ↕
+                        </button>
+                    </th>
                     <th>Actions</th>
                 </tr>
                 </thead>
+
                 <tbody id="studentTable"></tbody>
             </table>
-            <div class="pagination">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;
+                flex-wrap: wrap; margin-top: 15px;">
+
+            <span id="pageInfo">Page 1</span>
+
+            <div>
                 <button type="button" class="secondary" id="previousButton">
                     Previous
                 </button>
 
-                <span id="pageInfo">Page 1</span>
-
-                <button type="button" class="secondary" id="nextButton">
+                <button type="button" class="primary" id="nextButton">
                     Next
                 </button>
             </div>
         </div>
     </section>
+
 
 </div>
 
