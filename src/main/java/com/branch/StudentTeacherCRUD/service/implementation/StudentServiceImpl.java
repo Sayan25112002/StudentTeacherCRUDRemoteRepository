@@ -6,11 +6,13 @@ import com.branch.StudentTeacherCRUD.entity.Student;
 import com.branch.StudentTeacherCRUD.entity.Teacher;
 import com.branch.StudentTeacherCRUD.exception.ContactNumberAlreadyExistsException;
 import com.branch.StudentTeacherCRUD.exception.EmailAlreadyExistsException;
+import com.branch.StudentTeacherCRUD.exception.InvalidContactNumberException;
 import com.branch.StudentTeacherCRUD.exception.PasswordInvalidException;
 import com.branch.StudentTeacherCRUD.mapper.StudentMapper;
 import com.branch.StudentTeacherCRUD.repository.StudentRepository;
 import com.branch.StudentTeacherCRUD.service.StudentService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,21 +36,28 @@ public class StudentServiceImpl implements StudentService {
     public StudentResponseDto createStudent(StudentRequestDto studentRequestDto) throws IOException {
         Student student = studentMapper.toStudent(studentRequestDto);
         student.setPhotoPath(saveFile(studentRequestDto.getPhoto()));
+        String contactNo = studentRequestDto.getContactNo();
         String password = studentRequestDto.getPassword();
+        if(contactNo.length()!=10){
+            throw new InvalidContactNumberException("ERROR! NOT A VALID CONTACT NUMBER. CONTACT NUMBER MUST BE OF TEN CHARACTER.");
+        }
+        if(contactNo.matches(".*[A-Z].*")&&contactNo.matches(".*[a-z].*")&&contactNo.matches(".*[!@#$%^&].*")){
+            throw new InvalidContactNumberException("ERROR! NOT A VALID CONTACT NUMBER. CONTACT NUMBER MUST BE ONLY OF DIGITS.");
+        }
         if(password.length()<8){
-            throw new PasswordInvalidException("Password must be at least 8 characters");
+            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST BE AT LEAST 8 CHARACTER.");
         }
         if(!password.matches(".*[A-Z].*")){
-            throw new PasswordInvalidException("Password must have at least one Upper Case Letter");
+            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST HAVE AT LEAST 1 UPPER CASE LETTER.");
         }
         if(!password.matches(".*[a-z].*")){
-            throw new PasswordInvalidException("Password must have at least one Lower Case Letter");
+            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST HAVE AT LEAST 1 LOWER CASE LETTER.");
         }
         if(!password.matches(".*\\d*.")){
-            throw new PasswordInvalidException("Password must have at least one Digit Number");
+            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST HAVE AT LEAST 1 DIGIT.");
         }
         if(!password.matches(".*[^A-Za-z0-9].*")){
-            throw new PasswordInvalidException("Password must have at least one Special Character");
+            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST HAVE AT LEAST 1 SPECIAL CHARACTER.");
         }
         if(studentRepository.existsByEmail(studentRequestDto.getEmail())){
             throw new EmailAlreadyExistsException("Duplicate Email. Email Already Exists!");

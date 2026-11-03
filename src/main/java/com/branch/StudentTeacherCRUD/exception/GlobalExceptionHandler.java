@@ -55,4 +55,10 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(apiError, apiError.getStatus());
     }
 
+    @ExceptionHandler(InvalidContactNumberException.class)
+    public ResponseEntity<ApiError> handleInvalidContactNumberException(InvalidContactNumberException ex) {
+        ApiError apiError = new ApiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(apiError, apiError.getStatus());
+    }
+
 }

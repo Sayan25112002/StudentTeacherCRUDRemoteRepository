@@ -38,6 +38,10 @@ public class StudentRequestDto {
     @NotNull(message = "Contact Number must be provided", groups = {Update.class, Create.class})
     @NotBlank(message = "Contact Number must not be Blank", groups = {Update.class, Create.class})
     @Size(min=10,max=10,message = "Contact Number must be of exactly 10 digits", groups = {Update.class, Create.class})
+    @Pattern(
+            regexp = "^(?=.*[0-9]).{10,}$",
+            message = "Contact Number Must Only Have Digits"
+    )
     private String contactNo;
 
     @NotNull(message = "Password must be provided", groups = {Create.class})
