@@ -18,10 +18,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.List;
-import java.util.Set;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 import static com.branch.StudentTeacherCRUD.service.FileUploadService.saveFile;
 
@@ -103,5 +106,80 @@ public class StudentServiceImpl implements StudentService {
         return StudentDeletedDto.builder()
                 .message("STUDENT DELETED SUCCESSFULLY!!!")
                 .build();
+    }
+
+    @Override
+    public String importStudents(MultipartFile file) {
+        if(file.isEmpty()){
+            throw new IllegalArgumentException("Please select a valid CSV file");
+        }
+        int imported=0;
+        int skipped=0;
+        Set<String> emails = new HashSet<>();
+        Set<String> contactNos = new HashSet<>();
+        try(BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String headerLine = bufferedReader.readLine();
+            if(headerLine == null){
+                throw new IllegalArgumentException("CSV file is empty");
+            }
+            List<String> headers = parseCsvLine(headerLine.replace("\uFEFF",""));
+            headers.replaceAll(header->header.trim().toLowerCase(Locale.ROOT));
+            if(!new HashSet<>(headers).containsAll(List.of("firstName","lastName","email","contactNo","address"))){
+                throw new IllegalArgumentException("CSV file contains invalid data");
+            }
+            String csvLine;
+            while((csvLine = bufferedReader.readLine()) != null){
+                if(csvLine.isBlank()){
+                    continue;
+                }
+                List<String> values = parseCsvLine(csvLine);
+                if(values.size() != headers.size()){
+                    skipped++;
+                    continue;
+                }
+                String firstName = values.get(headers.indexOf("firstName")).trim();
+                String lastName = values.get(headers.indexOf("lastName")).trim();
+                String email = values.get(headers.indexOf("email")).trim();
+                String contactNo = values.get(headers.indexOf("contactNo")).trim();
+                String address = values.get(headers.indexOf("address")).trim();
+                if(firstName.isEmpty()
+                        || lastName.isEmpty()
+                        || email.isEmpty()
+                        || contactNo.isEmpty()
+                        || address.isEmpty()){
+                    skipped++;
+                    continue;
+                }
+                String normalizedEmail = email.toLowerCase(Locale.ROOT);
+                if(studentRepository.existsByEmail(email)
+                || studentRepository.existsByContactNo(contactNo)
+                || !emails.add(normalizedEmail)
+                || !contactNos.add(contactNo)){
+                    skipped++;
+                    continue;
+                }
+                Student student = Student.builder()
+                        .firstName(firstName)
+                        .lastName(lastName)
+                        .email(email)
+                        .contactNo(contactNo)
+                        .address(address)
+                        .build();
+                studentRepository.save(student);
+                imported++;
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return "Import Completed Successfully!!!";
+    }
+
+    private List<String> parseCsvLine(String replace) {
+    }
+
+    @Override
+    public byte[] exportStudents() {
+        return new byte[0];
     }
 }
