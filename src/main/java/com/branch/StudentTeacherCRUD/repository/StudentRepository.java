@@ -28,4 +28,8 @@ public interface StudentRepository extends JpaRepository<Student,Long> {
     boolean existsByEmail(String email);
 
     boolean existsByContactNo(String contactNo);
+
+    boolean existsByEmailAndIdNot(String email, Long id);
+
+    boolean existsByContactNoAndIdNot(String contactNo, Long id);
 }

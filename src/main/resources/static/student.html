@@ -385,24 +385,20 @@
 
     async function request(url, options = {}) {
         const response = await fetch(url, options);
-        if (!response.ok) {
-            const details = await response.text();
-            let errorMessage = details;
-            try {
-                const errorData = JSON.parse(details);
-                errorMessage = errorData.message || details;
-            } catch (error) {
-                // Keep the original response text if it isn't JSON.
-            }
-            throw new Error(errorMessage || `Request failed: ${response.status}`);
+        const details = await response.text();
+        let data;
+        try {
+            data = JSON.parse(details);
+        } catch (error) {
+            data = null;
         }
-        if (response.status === 204) {
+        if (!response.ok) {
+            throw new Error(data?.message || details || `Request failed: ${response.status}`);
+        }
+        if (response.status === 204 || !details) {
             return null;
         }
-        const contentType = response.headers.get("content-type") || "";
-        return contentType.includes("application/json")
-            ? response.json()
-            : null;
+        return data ?? details;
     }
 
     function showMessage(text) {
@@ -666,37 +662,6 @@
         const photo = document.getElementById("photo").files[0];
         const isEditing = editingId !== null;
 
-
-        // Validate password strength only when creating a student.
-        if (!isEditing) {
-            const password = student.password;
-
-            if (password.length < 8) {
-                alert("Password must contain at least 8 characters!");
-                return;
-            }
-
-            if (!/[A-Z]/.test(password)) {
-                alert("Password must contain at least one uppercase letter!");
-                return;
-            }
-
-            if (!/[a-z]/.test(password)) {
-                alert("Password must contain at least one lowercase letter!");
-                return;
-            }
-
-            if (!/[0-9]/.test(password)) {
-                alert("Password must contain at least one digit!");
-                return;
-            }
-
-            if (!/[^a-zA-Z0-9]/.test(password)) {
-                alert("Password must contain at least one special character!");
-                return;
-            }
-        }
-
         const formData = new FormData();
 
         Object.entries(student).forEach(([key, value]) => {
@@ -727,9 +692,9 @@
             resetForm();
             await loadStudents();
 
-            showMessage(isEditing
-                ? alert("Student updated successfully.")
-                : alert("Student created successfully."));
+            alert(isEditing
+                ? "STUDENT UPDATED SUCCESSFULLY!!!"
+                : "STUDENT CREATED SUCCESSFULLY!!!");
         } catch (error) {
             alert(error.message);
         }
@@ -793,9 +758,9 @@
             }
 
             await loadStudents();
-            showMessage("Student deleted successfully.");
+            alert("STUDENT DELETED SUCCESSFULLY!!!");
         } catch (error) {
-            showMessage("Delete failed: " + error.message);
+            alert("DELETION FAILED " + error.message);
         }
     }
 

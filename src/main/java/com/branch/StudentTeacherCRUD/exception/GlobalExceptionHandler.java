@@ -1,10 +1,10 @@
 package com.branch.StudentTeacherCRUD.exception;
 
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -38,8 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(PasswordInvalidException.class)
     public ResponseEntity<ApiError> handleInvalidPasswordException(PasswordInvalidException ex) {
-        String message = "Password Invalid. Password must be atleast 8 characters long with atleast one uppercase, lowercase, digit and special characters";
-        ApiError apiError = new ApiError(message, HttpStatus.CONFLICT);
+        ApiError apiError = new ApiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
         return new ResponseEntity<>(apiError, apiError.getStatus());
     }
 
@@ -58,6 +57,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidContactNumberException.class)
     public ResponseEntity<ApiError> handleInvalidContactNumberException(InvalidContactNumberException ex) {
         ApiError apiError = new ApiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(apiError, apiError.getStatus());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .getFirst()
+                .getDefaultMessage();
+        ApiError apiError = new ApiError(message, HttpStatus.BAD_REQUEST);
         return new ResponseEntity<>(apiError, apiError.getStatus());
     }
 

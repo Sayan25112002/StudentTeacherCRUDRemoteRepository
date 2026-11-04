@@ -1,18 +1,18 @@
 package com.branch.StudentTeacherCRUD.service.implementation;
 
 import com.branch.StudentTeacherCRUD.dto.requestDto.StudentRequestDto;
+import com.branch.StudentTeacherCRUD.dto.responseDto.StudentCreatedDto;
+import com.branch.StudentTeacherCRUD.dto.responseDto.StudentDeletedDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.StudentResponseDto;
+import com.branch.StudentTeacherCRUD.dto.responseDto.StudentUpdatedDto;
 import com.branch.StudentTeacherCRUD.entity.Student;
 import com.branch.StudentTeacherCRUD.entity.Teacher;
 import com.branch.StudentTeacherCRUD.exception.ContactNumberAlreadyExistsException;
 import com.branch.StudentTeacherCRUD.exception.EmailAlreadyExistsException;
-import com.branch.StudentTeacherCRUD.exception.InvalidContactNumberException;
-import com.branch.StudentTeacherCRUD.exception.PasswordInvalidException;
 import com.branch.StudentTeacherCRUD.mapper.StudentMapper;
 import com.branch.StudentTeacherCRUD.repository.StudentRepository;
 import com.branch.StudentTeacherCRUD.service.StudentService;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,40 +33,19 @@ public class StudentServiceImpl implements StudentService {
     private final StudentMapper studentMapper;
 
     @Override
-    public StudentResponseDto createStudent(StudentRequestDto studentRequestDto) throws IOException {
+    public StudentCreatedDto createStudent(StudentRequestDto studentRequestDto) throws IOException {
         Student student = studentMapper.toStudent(studentRequestDto);
         student.setPhotoPath(saveFile(studentRequestDto.getPhoto()));
-        String contactNo = studentRequestDto.getContactNo();
-        String password = studentRequestDto.getPassword();
-        if(contactNo.length()!=10){
-            throw new InvalidContactNumberException("ERROR! NOT A VALID CONTACT NUMBER. CONTACT NUMBER MUST BE OF TEN CHARACTER.");
-        }
-        if(contactNo.matches(".*[A-Z].*")&&contactNo.matches(".*[a-z].*")&&contactNo.matches(".*[!@#$%^&].*")){
-            throw new InvalidContactNumberException("ERROR! NOT A VALID CONTACT NUMBER. CONTACT NUMBER MUST BE ONLY OF DIGITS.");
-        }
-        if(password.length()<8){
-            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST BE AT LEAST 8 CHARACTER.");
-        }
-        if(!password.matches(".*[A-Z].*")){
-            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST HAVE AT LEAST 1 UPPER CASE LETTER.");
-        }
-        if(!password.matches(".*[a-z].*")){
-            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST HAVE AT LEAST 1 LOWER CASE LETTER.");
-        }
-        if(!password.matches(".*\\d*.")){
-            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST HAVE AT LEAST 1 DIGIT.");
-        }
-        if(!password.matches(".*[^A-Za-z0-9].*")){
-            throw new PasswordInvalidException("ERROR! NOT A VALID PASSWORD. PASSWORD MUST HAVE AT LEAST 1 SPECIAL CHARACTER.");
-        }
         if(studentRepository.existsByEmail(studentRequestDto.getEmail())){
-            throw new EmailAlreadyExistsException("Duplicate Email. Email Already Exists!");
+            throw new EmailAlreadyExistsException("ERROR! DUPLICATE EMAIL. EMAIL ALREADY EXISTS.");
         }
         if(studentRepository.existsByContactNo(studentRequestDto.getContactNo())){
-            throw new ContactNumberAlreadyExistsException("Duplicate Contact Number. Contact Number Already Exists!");
+            throw new ContactNumberAlreadyExistsException("ERROR! DUPLICATE CONTACT NUMBER. CONTACT NUMBER ALREADY EXISTS.");
         }
-        Student savedStudent = studentRepository.save(student);
-        return studentMapper.toStudentResponseDto(savedStudent);
+        studentRepository.save(student);
+        return StudentCreatedDto.builder()
+                .message("STUDENT CREATED SUCCESSFULLY!!!")
+                .build();
     }
 
     @Override
@@ -95,29 +74,34 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public StudentResponseDto updateStudent(StudentRequestDto studentRequestDto, Long id) throws IOException {
+    public StudentUpdatedDto updateStudent(StudentRequestDto studentRequestDto, Long id) throws IOException {
         Student student = studentRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Student not found"));
         if(studentRequestDto.getPhoto() != null){
             student.setPhotoPath(saveFile(studentRequestDto.getPhoto()));
         }
         studentMapper.updateStudent(studentRequestDto,student);
-        if(studentRepository.existsByEmail(studentRequestDto.getEmail())){
-            throw new EmailAlreadyExistsException("Duplicate Email. Email Already Exists!");
+        if(studentRepository.existsByEmailAndIdNot(studentRequestDto.getEmail(),id)){
+            throw new EmailAlreadyExistsException("ERROR! DUPLICATE EMAIL. EMAIL ALREADY EXISTS.");
         }
-        if(studentRepository.existsByContactNo(studentRequestDto.getContactNo())){
-            throw new ContactNumberAlreadyExistsException("Duplicate Contact Number. Contact Number Already Exists!");
+        if(studentRepository.existsByContactNoAndIdNot(studentRequestDto.getContactNo(),id)){
+            throw new ContactNumberAlreadyExistsException("ERROR! DUPLICATE CONTACT NUMBER. CONTACT NUMBER ALREADY EXISTS.");
         }
-        Student savedStudent = studentRepository.save(student);
-        return studentMapper.toStudentResponseDto(studentRepository.save(savedStudent));
+        studentRepository.save(student);
+        return StudentUpdatedDto.builder()
+                .message("STUDENT UPDATED SUCCESSFULLY!!!")
+                .build();
     }
 
     @Override
-    public void deleteStudent(Long id) {
+    public StudentDeletedDto deleteStudent(Long id) {
         Student student = studentRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Student not found"));
         Set<Teacher> teachers = student.getTeachers();
         for (Teacher teacher : teachers) {
             teacher.getStudents().remove(student);
         }
         studentRepository.delete(student);
+        return StudentDeletedDto.builder()
+                .message("STUDENT DELETED SUCCESSFULLY!!!")
+                .build();
     }
 }

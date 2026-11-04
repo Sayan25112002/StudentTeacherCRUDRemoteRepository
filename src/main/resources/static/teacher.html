@@ -134,6 +134,22 @@
             text-decoration: underline;
         }
 
+        input.field-error,
+        textarea.field-error {
+            border: 1px solid red;
+        }
+
+        .field-error-message {
+            color: red;
+            font-size: 13px;
+            margin-top: 5px;
+            font-weight: normal;
+        }
+
+        .field-error-message:empty {
+            display: none;
+        }
+
         @media (max-width: 600px) {
             body {
                 padding: 12px;
@@ -156,15 +172,40 @@
                 <div>
                     <label for="photo">Teacher Photo</label>
                     <input type="file" id="photo" accept="image/*" required>
+                    <small id="photoError" class="field-error-message"></small>
                     <img id="photoPreview" alt="Current Teacher Photo" width="100" height="100"
                          style="display: none; object-fit: cover; margin-top: 10px;">
                 </div>
-                <div><label for="name">Name</label><input type="text" id="name" required></div>
-                <div><label for="email">Email</label><input type="email" id="email" required></div>
-                <div><label for="contactNo">Contact Number</label><input type="tel" id="contactNo" required></div>
-                <div id="passwordField"><label for="password">Password</label><input type="password" id="password" required></div>
-                <div><label for="address">Address</label><textarea id="address" rows="3" required></textarea></div>
-                <div><label for="designation">Designation</label><input type="text" id="designation" required></div>
+                <div>
+                    <label for="name">Name</label>
+                    <input type="text" id="name" required>
+                    <small id="nameError" class="field-error-message"></small>
+                </div>
+                <div>
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                    <small id="emailError" class="field-error-message"></small>
+                </div>
+                <div>
+                    <label for="contactNo">Contact Number</label>
+                    <input type="tel" id="contactNo" required>
+                    <small id="contactNoError" class="field-error-message"></small>
+                </div>
+                <div id="passwordField">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                    <small id="passwordError" class="field-error-message"></small>
+                </div>
+                <div>
+                    <label for="address">Address</label>
+                    <textarea id="address" rows="3" required></textarea>
+                    <small id="addressError" class="field-error-message"></small>
+                </div>
+                <div>
+                    <label for="designation">Designation</label>
+                    <input type="text" id="designation" required>
+                    <small id="designationError" class="field-error-message"></small>
+                </div>
             </div>
             <div class="actions">
                 <button type="submit" class="primary" id="saveButton">Create Teacher</button>
@@ -252,18 +293,96 @@
     let searchBy = "";
     let search = "";
 
+
     async function request(url, options = {}) {
         const response = await fetch(url, options);
-        if (!response.ok) {
-            const details = await response.text();
-            throw new Error(details || `Request failed: ${response.status}`);
+        if (response.status === 204) {
+            if (!response.ok) {
+                throw new Error("Request failed: " + response.status);
+            }
+            return null;
         }
-        if (response.status === 204) return null;
         const contentType = response.headers.get("content-type") || "";
-        return contentType.includes("application/json") ? response.json() : null;
+        let data = null;
+        if (contentType.includes("application/json")) {
+            data = await response.json();
+        } else {
+            data = await response.text();
+        }
+        if (!response.ok) {
+            const errorMessage =
+                typeof data === "object" && data !== null
+                    ? data.message || JSON.stringify(data)
+                    : data;
+            throw new Error(errorMessage || `Request failed: ${response.status}`);
+        }
+        return data;
     }
 
+
     function showMessage(text) { message.textContent = text; }
+
+    const fieldIds = [
+        "photo", "name", "email", "contactNo",
+        "password", "address", "designation"
+    ];
+
+    function clearFieldErrors() {
+        fieldIds.forEach(id => {
+            document.getElementById(id).classList.remove("field-error");
+            document.getElementById(id + "Error").textContent = "";
+        });
+    }
+
+    function showFieldError(fieldId, errorText) {
+        const field = document.getElementById(fieldId);
+        const errorElement = document.getElementById(fieldId + "Error");
+
+        if (!field || !errorElement) return;
+
+        field.classList.add("field-error");
+        errorElement.textContent = errorText;
+    }
+
+    function showBackendError(errorText) {
+        clearFieldErrors();
+
+        const text = errorText.toLowerCase();
+
+        if (text.includes("email")) {
+            showFieldError("email", errorText);
+        } else if (
+            text.includes("contact") ||
+            text.includes("phone") ||
+            text.includes("mobile")
+        ) {
+            showFieldError("contactNo", errorText);
+        } else if (text.includes("password")) {
+            showFieldError("password", errorText);
+        } else if (text.includes("photo") || text.includes("image")) {
+            showFieldError("photo", errorText);
+        } else if (text.includes("designation")) {
+            showFieldError("designation", errorText);
+        } else if (text.includes("address")) {
+            showFieldError("address", errorText);
+        } else if (text.includes("name")) {
+            showFieldError("name", errorText);
+        } else {
+            showMessage("Operation failed: " + errorText);
+        }
+    }
+
+    fieldIds.forEach(id => {
+        document.getElementById(id).addEventListener("input", () => {
+            document.getElementById(id).classList.remove("field-error");
+            document.getElementById(id + "Error").textContent = "";
+        });
+
+        document.getElementById(id).addEventListener("change", () => {
+            document.getElementById(id).classList.remove("field-error");
+            document.getElementById(id + "Error").textContent = "";
+        });
+    });
 
     function getFormData() {
         return {
@@ -483,6 +602,8 @@
 
     form.addEventListener("submit", async event => {
         event.preventDefault();
+        clearFieldErrors();
+        showMessage("");
         const teacher = getFormData();
         const photo = document.getElementById("photo").files[0];
         const isEditing = editingId !== null;
@@ -492,7 +613,6 @@
             if (key === "password" && isEditing) return;
             formData.append(key, value);
         });
-
         try {
             if (photo) {
                 formData.append("photo", photo);
@@ -500,15 +620,25 @@
                 formData.append("photo", await getExistingPhotoFile(editingPhotoPath));
                 formData.append("photoPath", editingPhotoPath);
             }
-            await request(isEditing ? API.update(editingId) : API.create, {
-                method: isEditing ? "PUT" : "POST",
-                body: formData
-            });
+            const response = await request(
+                isEditing ? API.update(editingId) : API.create,
+                {
+                    method: isEditing ? "PUT" : "POST",
+                    body: formData
+                }
+            );
+            alert(
+                response && typeof response === "object" && response.message
+                    ? response.message
+                    : isEditing
+                        ? "Teacher updated successfully."
+                        : "Teacher created successfully."
+            );
             resetForm();
             await loadTeachers();
-            showMessage(isEditing ? "Teacher updated successfully." : "Teacher created successfully.");
         } catch (error) {
-            showMessage("Operation failed: " + error.message);
+            alert(error.message);
+            showBackendError(error.message);
         }
     });
 
@@ -544,12 +674,21 @@
     async function deleteTeacher(id) {
         if (!confirm("Are you sure you want to delete this teacher?")) return;
         try {
-            await request(API.delete(id), { method: "DELETE" });
-            if (String(editingId) === String(id)) resetForm();
+            const response = await request(API.delete(id), {
+                method: "DELETE"
+            });
+            alert(
+                response && typeof response === "object" && response.message
+                    ? response.message
+                    : "Teacher deleted successfully."
+            );
+            if (String(editingId) === String(id)) {
+                resetForm();
+            }
             await loadTeachers();
-            showMessage("Teacher deleted successfully.");
         } catch (error) {
-            showMessage("Delete failed: " + error.message);
+            alert(error.message);
+            showBackendError(error.message);
         }
     }
 
