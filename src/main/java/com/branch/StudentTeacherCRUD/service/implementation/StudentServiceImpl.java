@@ -1,9 +1,14 @@
 package com.branch.StudentTeacherCRUD.service.implementation;
 
 import com.branch.StudentTeacherCRUD.dto.requestDto.StudentRequestDto;
+import com.branch.StudentTeacherCRUD.dto.responseDto.StudentCreatedDto;
+import com.branch.StudentTeacherCRUD.dto.responseDto.StudentDeletedDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.StudentResponseDto;
+import com.branch.StudentTeacherCRUD.dto.responseDto.StudentUpdatedDto;
 import com.branch.StudentTeacherCRUD.entity.Student;
 import com.branch.StudentTeacherCRUD.entity.Teacher;
+import com.branch.StudentTeacherCRUD.exception.ContactNumberAlreadyExistsException;
+import com.branch.StudentTeacherCRUD.exception.EmailAlreadyExistsException;
 import com.branch.StudentTeacherCRUD.mapper.StudentMapper;
 import com.branch.StudentTeacherCRUD.repository.StudentRepository;
 import com.branch.StudentTeacherCRUD.service.StudentService;
@@ -28,11 +33,19 @@ public class StudentServiceImpl implements StudentService {
     private final StudentMapper studentMapper;
 
     @Override
-    public StudentResponseDto createStudent(StudentRequestDto studentRequestDto) throws IOException {
+    public StudentCreatedDto createStudent(StudentRequestDto studentRequestDto) throws IOException {
         Student student = studentMapper.toStudent(studentRequestDto);
         student.setPhotoPath(saveFile(studentRequestDto.getPhoto()));
-        Student savedStudent = studentRepository.save(student);
-        return studentMapper.toStudentResponseDto(savedStudent);
+        if(studentRepository.existsByEmail(studentRequestDto.getEmail())){
+            throw new EmailAlreadyExistsException("ERROR! DUPLICATE EMAIL. EMAIL ALREADY EXISTS.");
+        }
+        if(studentRepository.existsByContactNo(studentRequestDto.getContactNo())){
+            throw new ContactNumberAlreadyExistsException("ERROR! DUPLICATE CONTACT NUMBER. CONTACT NUMBER ALREADY EXISTS.");
+        }
+        studentRepository.save(student);
+        return StudentCreatedDto.builder()
+                .message("STUDENT CREATED SUCCESSFULLY!!!")
+                .build();
     }
 
     @Override
@@ -61,23 +74,34 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public StudentResponseDto updateStudent(StudentRequestDto studentRequestDto, Long id) throws IOException {
+    public StudentUpdatedDto updateStudent(StudentRequestDto studentRequestDto, Long id) throws IOException {
         Student student = studentRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Student not found"));
         if(studentRequestDto.getPhoto() != null){
             student.setPhotoPath(saveFile(studentRequestDto.getPhoto()));
         }
         studentMapper.updateStudent(studentRequestDto,student);
-        Student savedStudent = studentRepository.save(student);
-        return studentMapper.toStudentResponseDto(studentRepository.save(savedStudent));
+        if(studentRepository.existsByEmailAndIdNot(studentRequestDto.getEmail(),id)){
+            throw new EmailAlreadyExistsException("ERROR! DUPLICATE EMAIL. EMAIL ALREADY EXISTS.");
+        }
+        if(studentRepository.existsByContactNoAndIdNot(studentRequestDto.getContactNo(),id)){
+            throw new ContactNumberAlreadyExistsException("ERROR! DUPLICATE CONTACT NUMBER. CONTACT NUMBER ALREADY EXISTS.");
+        }
+        studentRepository.save(student);
+        return StudentUpdatedDto.builder()
+                .message("STUDENT UPDATED SUCCESSFULLY!!!")
+                .build();
     }
 
     @Override
-    public void deleteStudent(Long id) {
+    public StudentDeletedDto deleteStudent(Long id) {
         Student student = studentRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Student not found"));
         Set<Teacher> teachers = student.getTeachers();
         for (Teacher teacher : teachers) {
             teacher.getStudents().remove(student);
         }
         studentRepository.delete(student);
+        return StudentDeletedDto.builder()
+                .message("STUDENT DELETED SUCCESSFULLY!!!")
+                .build();
     }
 }

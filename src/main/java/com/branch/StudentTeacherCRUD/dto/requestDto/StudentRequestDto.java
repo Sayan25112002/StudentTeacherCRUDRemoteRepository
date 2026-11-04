@@ -32,22 +32,27 @@ public class StudentRequestDto {
 
     @NotNull(message = "Email must be provided", groups = {Update.class, Create.class})
     @NotBlank(message = "Email Must not be Blank", groups = {Update.class, Create.class})
-    @Email(message = "It should be a proper email format", groups = {Update.class, Create.class})
+    @Email(message = "INVALID EMAIL! EMAIL ADDRESS MUST BE PROPER", groups = {Update.class, Create.class})
     private String email;
 
     @NotNull(message = "Contact Number must be provided", groups = {Update.class, Create.class})
     @NotBlank(message = "Contact Number must not be Blank", groups = {Update.class, Create.class})
-    @Size(min=10,max=10,message = "Contact Number must be of exactly 10 digits", groups = {Update.class, Create.class})
+    @Size(min=10,max=10,message = "INVALID CONTACT NUMBER! CONTACT NUMBER MUST BE OF EXACTLY 10 CHARACTERS", groups = {Update.class, Create.class})
+    @Pattern(
+            regexp = "^[0-9]{10}$",
+            message = "INVALID CONTACT NUMBER! CONTACT NUMBER MUST BE OF ONLY OF DIGITS",
+            groups = {Update.class, Create.class}
+    )
     private String contactNo;
 
     @NotNull(message = "Password must be provided", groups = {Create.class})
     @NotBlank(message = "Password must not be Blank", groups = {Create.class})
     @Pattern(
             regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{8,}$",
-            message = "Password must be have at least one uppercase, one lowercase, one digit and one special symbol",
+            message = "INVALID PASSWORD! PASSWORD MUST HAVE AT LEAST ONE UPPERCASE CASE LETTER, ONE LOWER CASE LETTER, ONE DIGIT AND ONE SPECIAL CHARACTER",
             groups = {Create.class}
     )
-    @Size(min = 8 ,message = "Password must be at least 8 characters", groups = {Create.class})
+    @Size(min = 8 ,message = "INVALID PASSWORD! PASSWORD MUST HAVE AT LEAST EIGHT CHARACTERS", groups = {Create.class})
     private String password;
 
     @NotNull(message = "Address must be provided", groups = {Update.class, Create.class})

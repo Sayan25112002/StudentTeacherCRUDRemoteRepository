@@ -25,4 +25,11 @@ public interface StudentRepository extends JpaRepository<Student,Long> {
     @Query("SELECT s FROM Student s WHERE s.address ILIKE %:address%")
     Page<Student> findByAddress(String address, Pageable pageable);
 
+    boolean existsByEmail(String email);
+
+    boolean existsByContactNo(String contactNo);
+
+    boolean existsByEmailAndIdNot(String email, Long id);
+
+    boolean existsByContactNoAndIdNot(String contactNo, Long id);
 }
