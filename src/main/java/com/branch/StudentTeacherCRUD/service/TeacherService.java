@@ -5,6 +5,7 @@ import com.branch.StudentTeacherCRUD.dto.responseDto.TeacherCreatedDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.TeacherDeletedDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.TeacherResponseDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.TeacherUpdatedDto;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -20,6 +21,10 @@ public interface TeacherService {
     TeacherDeletedDto deleteTeacher(Long id);
 
     TeacherResponseDto assignTeacherToStudents(Long id, List<Long> ids);
+
+    String importTeachers(MultipartFile file) throws IOException;
+
+    byte[] exportTeachers();
 
 }
 
