@@ -5,6 +5,7 @@ import com.branch.StudentTeacherCRUD.dto.responseDto.StudentCreatedDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.StudentDeletedDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.StudentResponseDto;
 import com.branch.StudentTeacherCRUD.dto.responseDto.StudentUpdatedDto;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,6 +19,10 @@ public interface StudentService {
     StudentUpdatedDto updateStudent(StudentRequestDto studentRequestDto, Long id) throws IOException;
 
     StudentDeletedDto deleteStudent(Long id);
+
+    String importStudents(MultipartFile file);
+
+    byte[] exportStudents();
 
 }
 

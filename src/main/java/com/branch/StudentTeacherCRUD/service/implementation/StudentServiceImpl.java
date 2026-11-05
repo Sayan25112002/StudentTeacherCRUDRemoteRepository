@@ -18,10 +18,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.List;
-import java.util.Set;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 import static com.branch.StudentTeacherCRUD.service.FileUploadService.saveFile;
 
@@ -103,5 +106,120 @@ public class StudentServiceImpl implements StudentService {
         return StudentDeletedDto.builder()
                 .message("STUDENT DELETED SUCCESSFULLY!!!")
                 .build();
+    }
+
+    @Override
+    public String importStudents(MultipartFile file) {
+        if(file.isEmpty()){
+            throw new IllegalArgumentException("Please select a valid CSV file");
+        }
+        int imported=0;
+        int skipped=0;
+        Set<String> emails = new HashSet<>();
+        Set<String> contactNos = new HashSet<>();
+        try(BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String headerLine = bufferedReader.readLine();
+            if(headerLine == null){
+                throw new IllegalArgumentException("CSV file is empty");
+            }
+            List<String> headers = parseCsvLine(headerLine.replace("\uFEFF",""));
+            headers.replaceAll(String::trim);
+            if(!new HashSet<>(headers).containsAll(List.of("FIRST NAME","LAST NAME","EMAIL ADDRESS","CONTACT NUMBER","ADDRESS"))){
+                throw new IllegalArgumentException("CSV file contains invalid data");
+            }
+            String csvLine;
+            while((csvLine = bufferedReader.readLine()) != null){
+                if(csvLine.isBlank()){
+                    continue;
+                }
+                List<String> values = parseCsvLine(csvLine);
+                if(values.size() != headers.size()){
+                    skipped++;
+                    continue;
+                }
+                String firstName = values.get(headers.indexOf("FIRST NAME")).trim();
+                String lastName = values.get(headers.indexOf("LAST NAME")).trim();
+                String email = values.get(headers.indexOf("EMAIL ADDRESS")).trim();
+                String contactNo = values.get(headers.indexOf("CONTACT NUMBER")).trim();
+                String password = values.get(headers.indexOf("PASSWORD")).trim();
+                String address = values.get(headers.indexOf("ADDRESS")).trim();
+                if(firstName.isEmpty()
+                        || lastName.isEmpty()
+                        || email.isEmpty()
+                        || contactNo.isEmpty()
+                        || password.isEmpty()
+                        || address.isEmpty()){
+                    skipped++;
+                    continue;
+                }
+                String normalizedEmail = email.toLowerCase(Locale.ROOT);
+                if(studentRepository.existsByEmail(email)
+                || studentRepository.existsByContactNo(contactNo)
+                || !emails.add(normalizedEmail)
+                || !contactNos.add(contactNo)){
+                    skipped++;
+                    continue;
+                }
+                Student student = Student.builder()
+                        .firstName(firstName)
+                        .lastName(lastName)
+                        .email(email)
+                        .contactNo(contactNo)
+                        .password(password)
+                        .address(address)
+                        .build();
+                studentRepository.save(student);
+                imported++;
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return "Import Completed Successfully!!!";
+    }
+
+    @Override
+    public byte[] exportStudents() {
+        List<Student> students = studentRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        StringBuilder csv = new StringBuilder();
+        csv.append("ID,FIRST NAME,LAST NAME,EMAIL ADDRESS,CONTACT NUMBER,PASSWORD,ADDRESS\r\n");
+        for(Student student : students){
+            csv.append(csvValue(String.valueOf(student.getId()))).append(",");
+            csv.append(csvValue(student.getFirstName())).append(",");
+            csv.append(csvValue(student.getLastName())).append(",");
+            csv.append(csvValue(student.getEmail())).append(",");
+            csv.append(csvValue(student.getContactNo())).append(",");
+            csv.append(csvValue(student.getPassword())).append(",");
+            csv.append(csvValue(student.getAddress())).append("\r\n");
+        }
+        return ("\uFEFF"+csv).getBytes(StandardCharsets.UTF_8);
+    }
+
+    private List<String> parseCsvLine(String s) {
+        List<String> values = new ArrayList<>();
+        StringBuilder value = new StringBuilder();
+        boolean insideQuote = false;
+        for(int i = 0; i < s.length(); i++){
+            char c = s.charAt(i);
+            if(c=='"'){
+                if(insideQuote && i+1<s.length() && s.charAt(i+1)=='"'){
+                    value.append('"');
+                    i++;
+                }else {
+                    insideQuote = !insideQuote;
+                }
+            }else if(c==',' && !insideQuote){
+                values.add(value.toString());
+                value.setLength(0);
+            }else {
+                value.append(c);
+            }
+        }
+        values.add(value.toString());
+        return values;
+    }
+
+    private String csvValue(String s) {
+        return "\""+(s==null?"":s.replace("\"", "\"\""))+"\"";
     }
 }
