@@ -123,8 +123,8 @@ public class StudentServiceImpl implements StudentService {
                 throw new IllegalArgumentException("CSV file is empty");
             }
             List<String> headers = parseCsvLine(headerLine.replace("\uFEFF",""));
-            headers.replaceAll(header->header.trim().toLowerCase(Locale.ROOT));
-            if(!new HashSet<>(headers).containsAll(List.of("firstName","lastName","email","contactNo","address"))){
+            headers.replaceAll(String::trim);
+            if(!new HashSet<>(headers).containsAll(List.of("FIRST NAME","LAST NAME","EMAIL ADDRESS","CONTACT NUMBER","ADDRESS"))){
                 throw new IllegalArgumentException("CSV file contains invalid data");
             }
             String csvLine;
@@ -137,15 +137,17 @@ public class StudentServiceImpl implements StudentService {
                     skipped++;
                     continue;
                 }
-                String firstName = values.get(headers.indexOf("firstName")).trim();
-                String lastName = values.get(headers.indexOf("lastName")).trim();
-                String email = values.get(headers.indexOf("email")).trim();
-                String contactNo = values.get(headers.indexOf("contactNo")).trim();
-                String address = values.get(headers.indexOf("address")).trim();
+                String firstName = values.get(headers.indexOf("FIRST NAME")).trim();
+                String lastName = values.get(headers.indexOf("LAST NAME")).trim();
+                String email = values.get(headers.indexOf("EMAIL ADDRESS")).trim();
+                String contactNo = values.get(headers.indexOf("CONTACT NUMBER")).trim();
+                String password = values.get(headers.indexOf("PASSWORD")).trim();
+                String address = values.get(headers.indexOf("ADDRESS")).trim();
                 if(firstName.isEmpty()
                         || lastName.isEmpty()
                         || email.isEmpty()
                         || contactNo.isEmpty()
+                        || password.isEmpty()
                         || address.isEmpty()){
                     skipped++;
                     continue;
@@ -163,6 +165,7 @@ public class StudentServiceImpl implements StudentService {
                         .lastName(lastName)
                         .email(email)
                         .contactNo(contactNo)
+                        .password(password)
                         .address(address)
                         .build();
                 studentRepository.save(student);
@@ -175,11 +178,48 @@ public class StudentServiceImpl implements StudentService {
         return "Import Completed Successfully!!!";
     }
 
-    private List<String> parseCsvLine(String replace) {
-    }
-
     @Override
     public byte[] exportStudents() {
-        return new byte[0];
+        List<Student> students = studentRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        StringBuilder csv = new StringBuilder();
+        csv.append("ID,FIRST NAME,LAST NAME,EMAIL ADDRESS,CONTACT NUMBER,PASSWORD,ADDRESS\r\n");
+        for(Student student : students){
+            csv.append(csvValue(String.valueOf(student.getId()))).append(",");
+            csv.append(csvValue(student.getFirstName())).append(",");
+            csv.append(csvValue(student.getLastName())).append(",");
+            csv.append(csvValue(student.getEmail())).append(",");
+            csv.append(csvValue(student.getContactNo())).append(",");
+            csv.append(csvValue(student.getPassword())).append(",");
+            csv.append(csvValue(student.getAddress())).append("\r\n");
+        }
+        return ("\uFEFF"+csv).getBytes(StandardCharsets.UTF_8);
+    }
+
+    private List<String> parseCsvLine(String s) {
+        List<String> values = new ArrayList<>();
+        StringBuilder value = new StringBuilder();
+        boolean insideQuote = false;
+        for(int i = 0; i < s.length(); i++){
+            char c = s.charAt(i);
+            if(c=='"'){
+                if(insideQuote && i+1<s.length() && s.charAt(i+1)=='"'){
+                    value.append('"');
+                    i++;
+                }else {
+                    insideQuote = !insideQuote;
+                }
+            }else if(c==',' && !insideQuote){
+                values.add(value.toString());
+                value.setLength(0);
+            }else {
+                value.append(c);
+            }
+        }
+        values.add(value.toString());
+        return values;
+    }
+
+    private String csvValue(String s) {
+        return "\""+(s==null?"":s.replace("\"", "\"\""))+"\"";
     }
 }

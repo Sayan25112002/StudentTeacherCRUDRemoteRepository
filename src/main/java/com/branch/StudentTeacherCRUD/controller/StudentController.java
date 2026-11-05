@@ -9,8 +9,12 @@ import com.branch.StudentTeacherCRUD.service.StudentService;
 import com.branch.StudentTeacherCRUD.validations.Create;
 import com.branch.StudentTeacherCRUD.validations.Update;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -44,5 +48,19 @@ public class StudentController {
     @DeleteMapping("/deleteStudent")
     public StudentDeletedDto deleteStudent(@RequestParam Long id){
         return studentService.deleteStudent(id);
+    }
+
+    @PostMapping("/importStudents")
+    public String importStudents(@RequestParam MultipartFile file) throws IOException {
+        return studentService.importStudents(file);
+    }
+
+    @GetMapping("/exportStudents")
+    public ResponseEntity<byte[]> exportStudents(){
+        byte[] csvFile = studentService.exportStudents();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"List of Students.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csvFile);
     }
 }
