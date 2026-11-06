@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student & Teacher Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --sidebar: #172554;
+            --sidebar-hover: #263b80;
+            --accent: #4f6bed;
+            --background: #f3f5f9;
+            --text: #243047;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--background);
+            color: var(--text);
+        }
+
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 245px;
+            flex-shrink: 0;
+            background: var(--sidebar);
+            color: white;
+            padding: 24px 14px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand {
+            padding: 0 12px 25px;
+            border-bottom: 1px solid #ffffff25;
+        }
+
+        .brand h2 {
+            margin: 0 0 7px;
+            font-size: 20px;
+        }
+
+        .brand p {
+            margin: 0;
+            color: #c7d2fe;
+            font-size: 12px;
+        }
+
+        .menu-label {
+            margin: 25px 12px 10px;
+            color: #aab7e8;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+
+        .menu-button {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 13px 14px;
+            margin: 4px 0;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: #e5eaff;
+            text-align: left;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .menu-button:hover {
+            background: var(--sidebar-hover);
+        }
+
+        .menu-button.active {
+            background: var(--accent);
+            color: white;
+            font-weight: bold;
+        }
+
+        .menu-icon {
+            display: inline-flex;
+            width: 23px;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 18px 12px 0;
+            color: #c7d2fe;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .main {
+            min-width: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            min-height: 76px;
+            padding: 18px 28px;
+            background: white;
+            border-bottom: 1px solid #e3e7ef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .topbar h1 {
+            margin: 0;
+            font-size: 23px;
+        }
+
+        .topbar p {
+            margin: 6px 0 0;
+            color: #667085;
+            font-size: 13px;
+        }
+
+        .status {
+            padding: 8px 11px;
+            border-radius: 20px;
+            background: #e8f7ee;
+            color: #187344;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .content {
+            flex: 1;
+            min-height: 0;
+            padding: 22px;
+        }
+
+        .welcome {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .welcome-banner {
+            padding: 30px;
+            border-radius: 14px;
+            color: white;
+            background: linear-gradient(120deg, #263b80, #526fe8);
+            box-shadow: 0 8px 24px #263b801f;
+        }
+
+        .welcome-banner h2 {
+            margin: 0 0 10px;
+            font-size: 27px;
+        }
+
+        .welcome-banner p {
+            max-width: 620px;
+            margin: 0;
+            color: #edf0ff;
+            line-height: 1.6;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-top: 22px;
+        }
+
+        .card {
+            padding: 23px;
+            border: 1px solid #e6eaf2;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 3px 12px #00000008;
+        }
+
+        .card .icon {
+            display: inline-flex;
+            width: 46px;
+            height: 46px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 11px;
+            background: #edf0ff;
+            font-size: 24px;
+        }
+
+        .card h3 {
+            margin: 16px 0 8px;
+        }
+
+        .card p {
+            margin: 0 0 18px;
+            color: #667085;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .open-button {
+            padding: 10px 15px;
+            border: 0;
+            border-radius: 7px;
+            background: var(--accent);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .open-button:hover {
+            background: #3b55d9;
+        }
+
+        .page-frame {
+            display: none;
+            width: 100%;
+            height: calc(100vh - 120px);
+            min-height: 650px;
+            border: 0;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .page-frame.visible {
+            display: block;
+        }
+
+        @media (max-width: 760px) {
+            .app {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                padding: 14px;
+            }
+
+            .brand {
+                padding: 0 8px 14px;
+            }
+
+            .menu-label,
+            .sidebar-footer {
+                display: none;
+            }
+
+            .menu-list {
+                display: flex;
+                gap: 8px;
+                margin-top: 12px;
+            }
+
+            .menu-button {
+                justify-content: center;
+                margin: 0;
+                padding: 11px 9px;
+            }
+
+            .topbar {
+                padding: 16px;
+            }
+
+            .topbar h1 {
+                font-size: 19px;
+            }
+
+            .status {
+                display: none;
+            }
+
+            .content {
+                padding: 12px;
+            }
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .welcome-banner {
+                padding: 22px;
+            }
+
+            .page-frame {
+                height: 75vh;
+                min-height: 600px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <h2>Management Portal</h2>
+            <p>StudentTeacherCRUD</p>
+        </div>
+
+        <div class="menu-label">Main Menu</div>
+
+        <nav class="menu-list" aria-label="Main menu">
+            <button type="button" class="menu-button" data-page="student">
+                <span class="menu-icon" aria-hidden="true">🎓</span>
+                <span>Student</span>
+            </button>
+
+            <button type="button" class="menu-button" data-page="teacher">
+                <span class="menu-icon" aria-hidden="true">👩‍🏫</span>
+                <span>Teacher</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            Student and teacher record management
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1 id="pageTitle">Dashboard</h1>
+                <p id="pageSubtitle">Manage student and teacher records from one place.</p>
+            </div>
+            <span class="status">Management Portal</span>
+        </header>
+
+        <section class="content">
+            <div class="welcome" id="welcomePage">
+                <div class="welcome-banner">
+                    <h2>Welcome to the Dashboard</h2>
+                    <p>Choose Student or Teacher from the sidebar to create, view, update, and delete records.</p>
+                </div>
+
+                <div class="cards">
+                    <article class="card">
+                        <span class="icon" aria-hidden="true">🎓</span>
+                        <h3>Student Management</h3>
+                        <p>Create student records, view the student list, edit existing details, and delete records.</p>
+                        <button type="button" class="open-button" data-page="student">Open Students</button>
+                    </article>
+
+                    <article class="card">
+                        <span class="icon" aria-hidden="true">👩‍🏫</span>
+                        <h3>Teacher Management</h3>
+                        <p>Create teacher records, view the teacher list, edit existing details, and delete records.</p>
+                        <button type="button" class="open-button" data-page="teacher">Open Teachers</button>
+                    </article>
+                </div>
+            </div>
+
+            <iframe
+                id="studentFrame"
+                class="page-frame"
+                title="Student CRUD page"
+                src="student.html">
+            </iframe>
+
+            <iframe
+                id="teacherFrame"
+                class="page-frame"
+                title="Teacher CRUD page"
+                src="teacher.html">
+            </iframe>
+        </section>
+    </main>
+</div>
+
+<script>
+    const welcomePage = document.getElementById("welcomePage");
+    const studentFrame = document.getElementById("studentFrame");
+    const teacherFrame = document.getElementById("teacherFrame");
+    const pageTitle = document.getElementById("pageTitle");
+    const pageSubtitle = document.getElementById("pageSubtitle");
+    const menuButtons = document.querySelectorAll(".menu-button");
+
+    function openPage(page) {
+        welcomePage.style.display = "none";
+        studentFrame.classList.toggle("visible", page === "student");
+        teacherFrame.classList.toggle("visible", page === "teacher");
+
+        menuButtons.forEach(button => {
+            button.classList.toggle("active", button.dataset.page === page);
+        });
+
+        if (page === "student") {
+            pageTitle.textContent = "Student Management";
+            pageSubtitle.textContent = "Create, view, update, and delete student records.";
+        } else if (page === "teacher") {
+            pageTitle.textContent = "Teacher Management";
+            pageSubtitle.textContent = "Create, view, update, and delete teacher records.";
+        }
+    }
+
+    function showDashboard() {
+        welcomePage.style.display = "block";
+        studentFrame.classList.remove("visible");
+        teacherFrame.classList.remove("visible");
+        menuButtons.forEach(button => button.classList.remove("active"));
+        pageTitle.textContent = "Dashboard";
+        pageSubtitle.textContent = "Manage student and teacher records from one place.";
+    }
+
+    document.querySelectorAll("[data-page]").forEach(button => {
+        button.addEventListener("click", () => openPage(button.dataset.page));
+    });
+
+    // Clicking the brand returns to the dashboard home.
+    document.querySelector(".brand").style.cursor = "pointer";
+    document.querySelector(".brand").addEventListener("click", showDashboard);
+</script>
+</body>
+</html>
