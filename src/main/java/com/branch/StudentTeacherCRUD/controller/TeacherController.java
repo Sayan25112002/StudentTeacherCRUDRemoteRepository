@@ -62,10 +62,28 @@ public class TeacherController {
 
     @GetMapping("/exportTeachers")
     public ResponseEntity<byte[]> exportTeachers() {
-        byte[] csvFile = teacherService.exportTeachers();
+        byte[] teacherFile = teacherService.exportTeachers();
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"List of Teachers.csv\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
-                .body(csvFile);
+                .body(teacherFile);
+    }
+
+    @GetMapping("/exportMappedStudentsToTeacher")
+    public ResponseEntity<byte[]> exportMappedStudentsToTeacher() {
+        byte[] mappedStudentFile = teacherService.exportMappedStudentsToTeachers();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=\"List of Mapped Students To Teacher.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(mappedStudentFile);
+    }
+
+    @GetMapping("/exportMappedStudentsToOneTeacher")
+    public ResponseEntity<byte[]> exportMappedStudentsToOneTeacher(@RequestParam Long id) {
+        byte[] mappedStudentFile = teacherService.exportMappedStudentsToOneTeacher(id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=\"List of Mapped Students To One Teacher\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(mappedStudentFile);
     }
 }

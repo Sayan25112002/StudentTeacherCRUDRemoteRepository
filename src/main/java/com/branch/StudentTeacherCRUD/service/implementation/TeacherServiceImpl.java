@@ -192,7 +192,7 @@ public class TeacherServiceImpl implements TeacherService {
             throw new IllegalStateException(e);
         }
         return "Import Completed Successfully!!!";
-     }
+    }
 
     @Override
     public byte[] exportTeachers() {
@@ -207,6 +207,49 @@ public class TeacherServiceImpl implements TeacherService {
             csv.append(csvValue(teacher.getPassword())).append(",");
             csv.append(csvValue(teacher.getAddress())).append(",");
             csv.append(csvValue(teacher.getDesignation())).append("\r\n");
+        }
+        return ("\uFEFF"+csv).getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public byte[] exportMappedStudentsToTeachers() {
+        List<Teacher> teachers = teacherRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        StringBuilder csv = new StringBuilder();
+        csv.append("TEACHER ID,TEACHER NAME,TEACHER EMAIL,DESIGNATION,").append("STUDENT ID,STUDENT NAME,STUDENT EMAIL\r\n");
+        for(Teacher teacher : teachers){
+            if(teacher.getStudents().isEmpty()){
+                csv.append(csvValue(String.valueOf(teacher.getId()))).append(",");
+                csv.append(csvValue(teacher.getName())).append(",");
+                csv.append(csvValue(teacher.getEmail())).append(",");
+                csv.append(csvValue(teacher.getDesignation())).append("\r\n");
+            } else{
+                for(Student student : teacher.getStudents()){
+                    csv.append(csvValue(String.valueOf(teacher.getId()))).append(",");
+                    csv.append(csvValue(teacher.getName())).append(",");
+                    csv.append(csvValue(teacher.getEmail())).append(",");
+                    csv.append(csvValue(teacher.getDesignation())).append(",");
+                    csv.append(csvValue(String.valueOf(student.getId()))).append(",");
+                    csv.append(csvValue(student.getFirstName()+" "+student.getLastName())).append(",");
+                    csv.append(csvValue(student.getEmail())).append("\r\n");
+                    }
+            }
+        }
+        return ("\uFEFF"+csv).getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public byte[] exportMappedStudentsToOneTeacher(Long id) {
+        Teacher teacher = teacherRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Teacher with id " + id + " not found!"));
+        StringBuilder csv = new StringBuilder();
+        csv.append("TEACHER ID,TEACHER NAME,DESIGNATION")
+                .append("STUDENT ID,STUDENT NAME,STUDENT EMAIL\r\n");
+        for(Student student : teacher.getStudents()){
+            csv.append(csvValue(String.valueOf(teacher.getId()))).append(",");
+            csv.append(csvValue(teacher.getName())).append(",");
+            csv.append(csvValue(teacher.getDesignation())).append(",");
+            csv.append(csvValue(String.valueOf(student.getId()))).append(",");
+            csv.append(csvValue(student.getFirstName()+" "+student.getLastName())).append(",");
+            csv.append(csvValue(student.getEmail())).append("\r\n");
         }
         return ("\uFEFF"+csv).getBytes(StandardCharsets.UTF_8);
     }

@@ -227,6 +227,9 @@
             <button type="button" class="primary" id="importButton">
                 Import
             </button>
+            <button type="button" class="primary" id="exportMappedStudentsButton">
+                Export Mapped Students
+            </button>
             <input type="file" id="importFile" accept=".csv" hidden>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
@@ -289,7 +292,9 @@
         delete: id => `http://localhost:8080/deleteTeacher?id=${encodeURIComponent(id)}`,
         assign: "http://localhost:8080/mapStudentsToTeacher",
         import: "http://localhost:8080/importTeachers",
-        export: "http://localhost:8080/exportTeachers"
+        export: "http://localhost:8080/exportTeachers",
+        exportMappedStudents: "http://localhost:8080/exportMappedStudentsToTeacher",
+        exportMappedStudentsToOneTeacher: id => `http://localhost:8080/exportMappedStudentsToOneTeacher?id=${encodeURIComponent(id)}`
     };
 
     const form = document.getElementById("teacherForm");
@@ -582,14 +587,26 @@
                     `assignStudents.html?teacherId=${encodeURIComponent(teacher.id)}`;
             });
 
+            actions.append(editButton, assignButton);
+
+            if (Array.isArray(teacher.students) && teacher.students.length > 0) {
+                const exportMappedButton = document.createElement("button");
+                exportMappedButton.textContent = "Export Mapped Students";
+                exportMappedButton.className = "primary";
+                exportMappedButton.addEventListener("click", () =>
+                    exportMappedStudentsToOneTeacher(teacher.id)
+                );
+
+                actions.appendChild(exportMappedButton);
+            }
+
             const deleteButton = document.createElement("button");
             deleteButton.textContent = "Delete";
             deleteButton.className = "delete";
             deleteButton.addEventListener("click", () => deleteTeacher(teacher.id));
 
-            actions.append(editButton, assignButton, deleteButton);
+            actions.appendChild(deleteButton);
             row.appendChild(actions);
-
             table.appendChild(row);
         });
 
@@ -684,6 +701,31 @@
         window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
+    async function exportMappedStudentsToOneTeacher(id) {
+        try {
+            const response = await fetch(API.exportMappedStudentsToOneTeacher(id));
+
+            if (!response.ok) {
+                throw new Error("Failed to export mapped students.");
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = url;
+            link.download = `Mapped Students Teacher ${id}.csv`;
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
     async function deleteTeacher(id) {
         if (!confirm("Are you sure you want to delete this teacher?")) return;
         try {
@@ -727,22 +769,40 @@
         .addEventListener("click", async () => {
             try {
                 const response = await fetch(API.export);
-
                 if (!response.ok) {
                     throw new Error("Failed to export teachers.");
                 }
-
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
-
                 const disposition = response.headers.get("Content-Disposition");
                 const match = disposition?.match(/filename="?([^"]+)"?/);
-
                 link.href = url;
                 link.download = match ? match[1] : "List of Teachers.csv";
                 link.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                alert(error.message);
+            }
+        });
 
+    document.getElementById("exportMappedStudentsButton")
+        .addEventListener("click", async () => {
+            try {
+                const response = await fetch(API.exportMappedStudents);
+                if (!response.ok) {
+                    throw new Error("Failed to export mapped students.");
+                }
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                const disposition = response.headers.get("Content-Disposition");
+                const match = disposition?.match(/filename="?([^"]+)"?/);
+                link.href = url;
+                link.download = match
+                    ? match[1]
+                    : "List of Mapped Students To Teacher.csv";
+                link.click();
                 URL.revokeObjectURL(url);
             } catch (error) {
                 alert(error.message);
