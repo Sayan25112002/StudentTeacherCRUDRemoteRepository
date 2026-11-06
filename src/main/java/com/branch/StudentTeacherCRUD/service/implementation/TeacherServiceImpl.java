@@ -138,7 +138,7 @@ public class TeacherServiceImpl implements TeacherService {
                 throw new IllegalStateException("CSV File is empty");
             }
             List<String> headers = parseCsvLine(headerLine.replace("\uFEFF",""));
-            headers.replaceAll(String::toLowerCase);
+            headers.replaceAll(String::trim);
             if(!new HashSet<>(headers).containsAll(List.of("NAME","EMAIL ADDRESS","CONTACT NUMBER","PASSWORD","ADDRESS","DESIGNATION"))){
                throw new IllegalStateException("CSV File contain invalid data");
             }
@@ -152,16 +152,63 @@ public class TeacherServiceImpl implements TeacherService {
                     skipped++;
                     continue;
                 }
+                String name = values.get(headers.indexOf("NAME")).trim();
+                String email = values.get(headers.indexOf("EMAIL ADDRESS")).trim();
+                String contact = values.get(headers.indexOf("CONTACT NUMBER")).trim();
+                String password = values.get(headers.indexOf("PASSWORD")).trim();
+                String address = values.get(headers.indexOf("ADDRESS")).trim();
+                String designation = values.get(headers.indexOf("DESIGNATION")).trim();
+                if (name.isEmpty()
+                        ||email.isEmpty()
+                        ||contact.isEmpty()
+                        ||password.isEmpty()
+                        ||address.isEmpty()
+                        ||designation.isEmpty()
+                ){
+                    skipped++;
+                    continue;
+                }
+                String normalizedEmail = email.toLowerCase(Locale.ROOT);
+                if(teacherRepository.existsByEmail(email)
+                        ||teacherRepository.existsByContactNo(contact)
+                        ||!emails.add(normalizedEmail)
+                        ||!contacts.add(contact)
+                ){
+                    skipped++;
+                    continue;
+                }
+                Teacher teacher = Teacher.builder()
+                        .name(name)
+                        .email(email)
+                        .contactNo(contact)
+                        .password(password)
+                        .address(address)
+                        .designation(designation)
+                        .build();
+                teacherRepository.save(teacher);
+                imported++;
             }
         }catch(Exception e){
-            e.printStackTrace();
+            throw new IllegalStateException(e);
         }
         return "Import Completed Successfully!!!";
      }
 
     @Override
     public byte[] exportTeachers() {
-        return new byte[0];
+        List<Teacher> teachers = teacherRepository.findAll(Sort.by(Sort.Direction.ASC, "name"));
+        StringBuilder csv = new StringBuilder();
+        csv.append("ID,NAME,EMAIL ADDRESS,CONTACT NUMBER,PASSWORD,ADDRESS,DESIGNATION\r\n");
+        for(Teacher teacher : teachers){
+            csv.append(csvValue(String.valueOf(teacher.getId()))).append(",");
+            csv.append(csvValue(teacher.getName())).append(",");
+            csv.append(csvValue(teacher.getEmail())).append(",");
+            csv.append(csvValue(teacher.getContactNo())).append(",");
+            csv.append(csvValue(teacher.getPassword())).append(",");
+            csv.append(csvValue(teacher.getAddress())).append(",");
+            csv.append(csvValue(teacher.getDesignation())).append("\r\n");
+        }
+        return ("\uFEFF"+csv).getBytes(StandardCharsets.UTF_8);
     }
 
     private List<String> parseCsvLine(String s) {

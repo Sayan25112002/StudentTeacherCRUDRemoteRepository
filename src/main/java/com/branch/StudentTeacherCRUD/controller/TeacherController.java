@@ -9,8 +9,12 @@ import com.branch.StudentTeacherCRUD.service.TeacherService;
 import com.branch.StudentTeacherCRUD.validations.Create;
 import com.branch.StudentTeacherCRUD.validations.Update;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,5 +53,19 @@ public class TeacherController {
     @PostMapping("/mapStudentsToTeacher")
     public TeacherResponseDto mapTeacherToStudents(@RequestParam Long id, @RequestParam List<Long> ids) {
         return teacherService.assignTeacherToStudents(id, ids);
+    }
+
+    @PostMapping("/importTeachers")
+    public String importTeachers(@RequestParam("file") MultipartFile file) throws IOException {
+        return teacherService.importTeachers(file);
+    }
+
+    @GetMapping("/exportTeachers")
+    public ResponseEntity<byte[]> exportTeachers() {
+        byte[] csvFile = teacherService.exportTeachers();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"List of Teachers.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csvFile);
     }
 }
