@@ -26,5 +26,9 @@ public interface TeacherService {
 
     byte[] exportTeachers();
 
+    byte[] exportMappedStudentsToTeachers();
+
+    byte[] exportMappedStudentsToOneTeacher(Long id);
+
 }
 

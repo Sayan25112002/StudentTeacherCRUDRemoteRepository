@@ -188,7 +188,7 @@
 <script>
     const API = {
         teachers: "http://localhost:8080/readTeacher",
-        students: "http://localhost:8080/readStudent",
+        students: "http://localhost:8080/readStudent?pageNumber=1&pageSize=10000&sortBy=id&sortDir=ASC",
         assign: "http://localhost:8080/mapStudentsToTeacher"
     };
 
@@ -244,7 +244,7 @@
 
         try {
             const [teachers, students] = await Promise.all([
-                request(API.teachers),
+                request("http://localhost:8080/readTeacher?pageNumber=1&pageSize=10000&sortBy=id&sortDir=ASC"),
                 request(API.students)
             ]);
 
